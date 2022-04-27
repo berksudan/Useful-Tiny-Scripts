@@ -1,0 +1,20 @@
+#!/usr/bin/bash
+
+# Usage:
+ # 1. Put this script file into the folder containing pdfs.
+ # 2. Change cattedPDFname variable if you want.
+ # 3. Run this script. Note: This script orders pdfs in alphabetical order. 
+
+cattedPDFname="merged_with_bookmarks.pdf"
+
+# make each PDF contain a single bookmark to first page
+tempPDF=`mktemp`
+for i in *.pdf
+do
+    bookmarkTitle=`basename "$i" .pdf`
+    bookmarkInfo="BookmarkBegin\nBookmarkTitle: $bookmarkTitle\nBookmarkLevel: 1\nBookmarkPageNumber: 1"
+    pdftk "$i" update_info_utf8 <(echo -en $bookmarkInfo) output $tempPDF verbose
+    mv $tempPDF "$i"
+done
+
+pdftk *.pdf cat output "$cattedPDFname" verbose # concatenate the PDFs
