@@ -1,8 +1,10 @@
 #!/bin/bash
 
-# This program has 2 functionalities
+# Functionalities
 #   1. Shortens path from "~/LONG/PATH/TO/THIS/PARENT_DIR" to "~/.../PARENT_DIR$"
 #   2. Activates the virtual environment in python project
+
+# Usage: "source ./activate_project.sh" OR ". ./activate_project.sh"
 
 CURRENT_PATH="$(
   cd "$(dirname "${BASH_SOURCE[0]}")" || exit
