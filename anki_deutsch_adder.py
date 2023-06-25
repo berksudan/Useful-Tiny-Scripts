@@ -136,8 +136,8 @@ def anki_deutsch_adder(filename:str):
         for line in lines:
           print('\n  > ' + line[:-1],end='')
         print(Style.RESET_ALL)
-        selection = input('> Do you want to erase the file content? (Y/n)?:')
-        if not selection.lower() == 'n':
+        selection = input('> Do you want to erase the file content? (y/N)?:')
+        if not selection.lower() == 'y':
           with open(filename, "a+") as fp:
             fp.truncate(0)
             print('> File content deleted!')
@@ -160,4 +160,3 @@ def anki_deutsch_adder(filename:str):
 
 if __name__ == "__main__":
   anki_deutsch_adder(filename='new_anki_cards.csv')
-
