@@ -58,11 +58,11 @@ def resolve_token(token:str) -> str:
     output = input("   > Enter a singular noun:").title()
     if not output.isalpha(): return None
   elif token == "VERB":
-    output = input("   > Enter a verb (use `*` for trennbare Wörter, add ` sich` at the end if reflexive):").lower()
-    if not output.replace('*','').replace(' sich','').isalpha(): return None
+    output = input("   > Enter a verb in a perfekt form (add `sich ` at the beginning if reflexive):").lower()
+    if not output.replace('*','').replace('sich ','').isalpha(): return None
   elif token == "VERB_PERFEKT":
-    output = input("   > Enter a verb in a perfekt form (add ` sich` at the end if reflexive):").lower()
-    if not output.replace(' sich','').isalpha(): return None
+    output = input("   > Enter a verb in a perfekt form (add `sich ` at the beginning if reflexive):").lower()
+    if not output.replace('sich ','').isalpha(): return None
   elif token == "ARTIKEL":
     output = input("   > Enter an artikel (der,die,das):").lower()
     if not output in ('der','die','das'):
@@ -73,6 +73,16 @@ def resolve_token(token:str) -> str:
       return None
     if output == 'both':
       output = 'haben/sein'
+  elif token == "AKK_DAT":
+    output = input('   > Enter "akkusativ" or "dativ":').lower()
+    if not output in ('akkusativ','dativ'):
+      return None
+    output = output.upper()
+  elif token == "PREPOSITION":
+    output = input('   > Enter a preposition (an,auf,aus,bei,durch,für,gegen,mit,ohne,um,unter,über,von,vor,zu):').lower()
+    if not output in ('an','auf','aus','bei','durch','für','gegen','mit','ohne','um','unter','über','von','vor','zu'):
+      return None
+    output = output.upper()
   elif token == 'OPTIONAL_PLURAL':
     selection = input("   > Does this word have a plural form? (Y/n):").lower()
     if selection == 'n':
@@ -100,6 +110,7 @@ def anki_deutsch_csv_row() -> str:
     ('KOMPARATIV', '{ADJEKTIV};{ADJEKTIV_KOMPARATIV}'),
     ('KONJUGATION (ICH/DU/ES)', '{VERB};{ICH_DU_ES}'),
     ('KONJUGATION (WIR/IHR/SIE)', '{VERB};{WIR_IHR_SIE}'),
+    ('PRÄPOSITION & AKKUSATIV/DATIV', '{VERB};{VERB} + {PREPOSITION} + {AKK_DAT}'),
     ('QUIZFRAGE', '{STR_ENGLISH1};{STR_ENGLISH2}'),
     ('SUPERLATIV', '{ADJEKTIV};{ADJEKTIV_SUPERLATIV}'),
   ])
@@ -160,4 +171,4 @@ def anki_deutsch_adder(filename:str):
 
 if __name__ == "__main__":
   anki_deutsch_adder(filename='new_anki_cards.csv')
-  
+
