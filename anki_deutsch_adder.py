@@ -73,14 +73,15 @@ def resolve_token(token:str) -> str:
       return None
     if output == 'both':
       output = 'haben/sein'
+    output = output.upper()
   elif token == "AKK_DAT":
     output = input('   > Enter "akkusativ" or "dativ":').lower()
     if not output in ('akkusativ','dativ'):
       return None
     output = output.upper()
   elif token == "PREPOSITION":
-    output = input('   > Enter a preposition (an,auf,aus,bei,durch,für,gegen,mit,ohne,um,unter,über,von,vor,zu):').lower()
-    if not output in ('an','auf','aus','bei','durch','für','gegen','mit','ohne','um','unter','über','von','vor','zu'):
+    output = input('   > Enter a preposition (an,auf,aus,bei,durch,für,gegen,mit,nach,ohne,um,unter,über,von,vor,zu):').lower()
+    if not output in ('an','auf','aus','bei','durch','für','gegen','mit','nach','ohne','um','unter','über','von','vor','zu'):
       return None
     output = output.upper()
   elif token == 'OPTIONAL_PLURAL':
