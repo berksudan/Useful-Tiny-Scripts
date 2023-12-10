@@ -31,7 +31,7 @@ def resolve_token(token:str) -> str:
     for word in check_words:
       if word.count(' ') > 1: return None
       if not word.replace(' ','').isalpha(): return None
-    output = f'ich {ich}\ndu {du}\ner/sie/es {er_sie_es}'
+    output = f'ich {ich}<br>du {du}<br>er/sie/es {er_sie_es}'
   elif token == "WIR_IHR_SIE":
     wir = input('   > Enter a conjugation for "wir" (add ` uns` at the end if reflexive):').lower()
     ihr = input('   > Enter a conjugation for "ihr" (add ` euch` at the end if reflexive):').lower()
@@ -40,7 +40,7 @@ def resolve_token(token:str) -> str:
     for word in check_words:
       if word.count(' ') > 1: return None
       if not word.replace(' ','').isalpha(): return None
-    output = f'wir {wir}\nihr {ihr}\nSie/sie {Sie_sie}'
+    output = f'wir {wir}<br>ihr {ihr}<br>Sie/sie {Sie_sie}'
   elif token == "ADJEKTIV":
     output = input("   > Enter an adjective:").lower()
     if not output.isalpha(): return None
@@ -172,4 +172,3 @@ def anki_deutsch_adder(filename:str):
 
 if __name__ == "__main__":
   anki_deutsch_adder(filename='new_anki_cards.csv')
-
