@@ -67,12 +67,12 @@ def resolve_token(token:str) -> str:
     output = input("   > Enter an artikel (der,die,das):").lower()
     if not output in ('der','die','das'):
       return None
-  elif token == "HABEN_SEIN":
-    output = input('   > Enter "haben", "sein" or "both":').lower()
-    if not output in ('haben','sein','both'):
+  elif token == "HAT_IST":
+    output = input('   > Enter "hat", "ist" or "both":').lower()
+    if not output in ('hat','ist','both'):
       return None
     if output == 'both':
-      output = 'haben/sein'
+      output = 'hat/ist'
     output = output.upper()
   elif token == "AKK_DAT":
     output = input('   > Enter "akkusativ" or "dativ":').lower()
@@ -104,7 +104,7 @@ def anki_deutsch_csv_row() -> str:
     ('AKKUSATIVFORM', '{STR_GERMAN1};{STR_GERMAN2}'),
     ('AUFFORDERUNG', '{STR_GERMAN};{STR_ENGLISH}'),
     ('DATIVFORM', '{STR_GERMAN1};{STR_GERMAN2}'),
-    ('HABEN/SEIN + PERFEKT', '{VERB};{HABEN_SEIN} + {VERB_PERFEKT}'),
+    ('HAT/IST + PERFEKT', '{VERB};{HAT_IST} + {VERB_PERFEKT}'),
     ('IN ENG & ARTIKEL & PLURAL', '{NOUN_SINGULAR};{STR_ENGLISH}, {ARTIKEL} {NOUN_SINGULAR}, {OPTIONAL_PLURAL}'),
     ('IN ENG', '{STR_GERMAN};{STR_ENGLISH}'),
     ('KOMPARATIV & SUPERLATIV', '{ADJEKTIV};{ADJEKTIV_KOMPARATIV}, am {ADJEKTIV_SUPERLATIV}'),
