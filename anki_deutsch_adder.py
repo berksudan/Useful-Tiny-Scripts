@@ -20,6 +20,16 @@ def enter_category_index(category_keys:List[int]) -> int:
 
   return int(category_index)
 
+def enter_from_options(options:List[str], output_upper_case:bool=True):
+  quoted_opt = list(map(lambda x: f'"{x}"' , options))
+  output = input(f'   > Enter {", ".join(quoted_opt[:-1])} or {quoted_opt[-1]}:').lower()
+  if not output in options:
+    return None
+  if output_upper_case:
+    output = output.upper()
+  return output
+
+
 def resolve_token(token:str) -> str:
   if token == '':
     pass
@@ -54,36 +64,27 @@ def resolve_token(token:str) -> str:
     output = input("   > Enter a German text:")
   elif token.startswith("STR_ENGLISH"):
     output = input("   > Enter an English text:")
+  elif token.startswith("STR_ANY"):
+    output = input("   > Enter any text:")
   elif token == "NOUN_SINGULAR":
     output = input("   > Enter a singular noun:").title()
     if not output.isalpha(): return None
-  elif token == "VERB":
-    output = input("   > Enter a verb in a perfekt form (add `sich ` at the beginning if reflexive):").lower()
+  elif token.startswith('VERB_'):
+    form = token.split('VERB_')[1].lower()
+    assert form in ('present','perfekt', 'präteritum')
+    output = input(f'   > Enter a verb in a {form} form (add `sich ` at the beginning if reflexive):').lower()
     if not output.replace('*','').replace('sich ','').isalpha(): return None
-  elif token == "VERB_PERFEKT":
-    output = input("   > Enter a verb in a perfekt form (add `sich ` at the beginning if reflexive):").lower()
-    if not output.replace('sich ','').isalpha(): return None
   elif token == "ARTIKEL":
-    output = input("   > Enter an artikel (der,die,das):").lower()
-    if not output in ('der','die','das'):
-      return None
+    output = enter_from_options(['der','die','das'], output_upper_case=False)
   elif token == "HAT_IST":
-    output = input('   > Enter "hat", "ist" or "both":').lower()
-    if not output in ('hat','ist','both'):
-      return None
-    if output == 'both':
-      output = 'hat/ist'
-    output = output.upper()
+    output =  enter_from_options(options=['hat','ist','both'], output_upper_case=True)
+    if output == 'BOTH':
+      output = 'HAT/IST'
   elif token == "AKK_DAT":
-    output = input('   > Enter "akkusativ" or "dativ":').lower()
-    if not output in ('akkusativ','dativ'):
-      return None
-    output = output.upper()
+    output = enter_from_options(options=['akkusativ','dativ'], output_upper_case=True)
   elif token == "PREPOSITION":
-    output = input('   > Enter a preposition (an,auf,aus,bei,durch,für,gegen,mit,nach,ohne,um,unter,über,von,vor,zu):').lower()
-    if not output in ('an','auf','aus','bei','durch','für','gegen','mit','nach','ohne','um','unter','über','von','vor','zu'):
-      return None
-    output = output.upper()
+    list_prepositions = ['an','auf','aus','bei','durch','für','gegen','mit','nach','ohne','um','unter','über','von','vor','zu']
+    output = enter_from_options(list_prepositions,output_upper_case=True)
   elif token == 'OPTIONAL_PLURAL':
     selection = input("   > Does this word have a plural form? (Y/n):").lower()
     if selection == 'n':
@@ -101,18 +102,19 @@ def resolve_token(token:str) -> str:
 def anki_deutsch_csv_row() -> str:
   categories = OrderedDict([
     ('ARTIKEL & PLURAL', '{NOUN_SINGULAR};{ARTIKEL} {NOUN_SINGULAR}, {OPTIONAL_PLURAL}'),
-    ('AKKUSATIVFORM', '{STR_GERMAN1};{STR_GERMAN2}'),
+    ('AKKUSATIVFORM', '{STR_GERMAN_1};{STR_GERMAN_2}'),
     ('AUFFORDERUNG', '{STR_GERMAN};{STR_ENGLISH}'),
-    ('DATIVFORM', '{STR_GERMAN1};{STR_GERMAN2}'),
-    ('HAT/IST + PERFEKT', '{VERB};{HAT_IST} + {VERB_PERFEKT}'),
+    ('DATIVFORM', '{STR_GERMAN_1};{STR_GERMAN_2}'),
+    ('HAT/IST + PERFEKT', '{VERB_PRESENT};{HAT_IST} + {VERB_PERFEKT}'),
+    ('PRÄTERITUM/PERFEKT', '{VERB_PRESENT};{VERB_PRÄTERITUM}, {HAT_IST} + {VERB_PERFEKT}'),
     ('IN ENG & ARTIKEL & PLURAL', '{NOUN_SINGULAR};{STR_ENGLISH}, {ARTIKEL} {NOUN_SINGULAR}, {OPTIONAL_PLURAL}'),
     ('IN ENG', '{STR_GERMAN};{STR_ENGLISH}'),
     ('KOMPARATIV & SUPERLATIV', '{ADJEKTIV};{ADJEKTIV_KOMPARATIV}, am {ADJEKTIV_SUPERLATIV}'),
     ('KOMPARATIV', '{ADJEKTIV};{ADJEKTIV_KOMPARATIV}'),
-    ('KONJUGATION (ICH/DU/ES)', '{VERB};{ICH_DU_ES}'),
-    ('KONJUGATION (WIR/IHR/SIE)', '{VERB};{WIR_IHR_SIE}'),
-    ('PRÄPOSITION & AKKUSATIV/DATIV', '{VERB};{VERB} + {PREPOSITION} + {AKK_DAT}'),
-    ('QUIZFRAGE', '{STR_ENGLISH1};{STR_ENGLISH2}'),
+    ('KONJUGATION (ICH/DU/ES)', '{VERB_PRESENT};{ICH_DU_ES}'),
+    ('KONJUGATION (WIR/IHR/SIE)', '{VERB_PRESENT};{WIR_IHR_SIE}'),
+    ('PRÄPOSITION & AKKUSATIV/DATIV', '{VERB_PRESENT};{VERB_PRESENT} + {PREPOSITION} + {AKK_DAT}'),
+    ('QUIZFRAGE', '{STR_ANY_1};{STR_ANY_2}'),
     ('SUPERLATIV', '{ADJEKTIV};{ADJEKTIV_SUPERLATIV}'),
   ])
 
