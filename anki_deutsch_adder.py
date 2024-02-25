@@ -4,13 +4,13 @@ import re
 import os
 import time
 
-BACK_CYAN = "\x1b[46m"  # Taken from the Back.CYAN of the colorama package
-BACK_YELLOW = "\x1b[43m"  # Taken from the Back.YELLOW of the colorama package
-FORE_BLACK = "\x1b[30m"  # Taken from the Fore.BLACK of the colorama package
-FORE_MAGENTA = "\x1b[35m"  # Taken from the Fore.MAGENTA of the colorama package
-FORE_RED = "\x1b[31m"  # Taken from the Fore.RED of the colorama package
-FORE_YELLOW = "\x1b[33m"  # Taken from the Fore.YELLOW of the colorama package
-STYLE_RESET_ALL = "\x1b[0m"  # Taken from the Style.RESET_ALL of the colorama package
+BACK_CYAN = "\x1b[46m"  # Taken from the Back.CYAN of the Colorama package
+BACK_YELLOW = "\x1b[43m"  # Taken from the Back.YELLOW of the Colorama package
+FORE_BLACK = "\x1b[30m"  # Taken from the Fore.BLACK of the Colorama package
+FORE_MAGENTA = "\x1b[35m"  # Taken from the Fore.MAGENTA of the Colorama package
+FORE_RED = "\x1b[31m"  # Taken from the Fore.RED of the Colorama package
+FORE_YELLOW = "\x1b[33m"  # Taken from the Fore.YELLOW of the Colorama package
+STYLE_RESET_ALL = "\x1b[0m"  # Taken from the Style.RESET_ALL of the Colorama package
 
 
 def enter_category_index(category_keys: List[int]) -> int:
