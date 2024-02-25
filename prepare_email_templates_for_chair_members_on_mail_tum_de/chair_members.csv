@@ -1,0 +1,8 @@
+organization_type,organization_name,person_name,person_email_address,taken_courses
+chair,Chair of Media Technology,Name Surname,name.surname@domain.com,None
+research group,"Group ""Machine learning"" (Chair of Scientific Computing)",Name Surname,name.surname@domain.com,None
+chair,Chair of Real-Time Computer Systems,Name Surname,name.surname@domain.com,None
+institute,Munich Institute of Robotics and Machine Intelligence (MIRMI),Name Surname,name.surname@domain.com,None
+institute,Munich Institute of Robotics and Machine Intelligence (MIRMI),Name Surname,name.surname@domain.com,None
+chair,Chair of Perception for Intelligent Systems,Name Surname,name.surname@domain.com,None
+research group,Computational Imaging and Inverse Problems Group,Name Surname,anonymous@domain.com,Basic Mathematical Methods for Imaging and Visualization (2021-WiSe);Concepts of C++ programming (2022-WiSe)
