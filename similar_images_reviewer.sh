@@ -11,10 +11,10 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DIR"
 
 # Check if any files in the current directory contain empty space
-files_with_spaces=$(find . -type f -name "* *" -exec echo {} \;)
+files_with_spaces=$(find . -type f -name "* *" -exec echo "> {}" \;)
 
 if [ -n "$files_with_spaces" ]; then
-    echo_error "The following files exist and cannot contain empty space; please rename them before continuing: $files_with_spaces"
+    echo_error "The following files contain empty space, rename them before continuing:\n$files_with_spaces"
     exit 1
 fi
 
@@ -24,9 +24,14 @@ sudo apt install findimagedupes
 
 # Execute the command and store its output in a variable
 echo_info "The output of 'findimagedupes' is being retrieved.."
-# output=$(findimagedupes .  2>/dev/null)
 output=$(findimagedupes .)
 echo_info "The output of 'findimagedupes' has been successfully retrieved."
+
+# Check if the output is empty
+if [ -z "$output" ]; then
+  echo_info "No set of similar images have been found."
+  exit 1
+fi
 
 # Get the current directory path
 current_path=$(pwd)
