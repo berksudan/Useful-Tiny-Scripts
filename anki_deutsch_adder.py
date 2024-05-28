@@ -177,7 +177,7 @@ def anki_deutsch_csv_row() -> str:
             ("DATIVFORM", "{STR_GERMAN_1};{STR_GERMAN_2}"),
             ("HAT/IST + PERFEKT", "{VERB_PRESENT};{HAT_IST} + {VERB_PERFEKT}"),
             (
-                "PRÄTERITUM & PERFEKT",
+                "PRÄTERITUM & HAT/IST + PERFEKT",
                 "{VERB_PRESENT};{VERB_PRÄTERITUM}, {HAT_IST} + {VERB_PERFEKT}",
             ),
             (
