@@ -114,7 +114,7 @@ def resolve_token(token: str) -> str:
         output = input(
             f"   > Enter a verb in a {form} form (add `sich ` at the beginning if reflexive):"
         ).lower()
-        if not output.replace("*", "").replace("sich ", "").isalpha():
+        if not output.replace("*", "").replace("sich ", "").replace(" ", "").isalpha():
             return None
     elif token == "ARTIKEL":
         output = enter_from_options(["der", "die", "das"], output_upper_case=False)
