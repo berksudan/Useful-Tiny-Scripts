@@ -181,10 +181,10 @@ def anki_deutsch_csv_row() -> str:
                 "{VERB_PRESENT};{VERB_PRÄTERITUM}, {HAT_IST} + {VERB_PERFEKT}",
             ),
             (
-                "IN ENG & ARTIKEL & PLURAL",
+                "DEU -> ENG & ARTIKEL & PLURAL",
                 "{NOUN_SINGULAR};{STR_ENGLISH}, {ARTIKEL} {NOUN_SINGULAR}, {OPTIONAL_PLURAL}",
             ),
-            ("IN ENG", "{STR_GERMAN};{STR_ENGLISH}"),
+            ("DEU -> ENG", "{STR_GERMAN};{STR_ENGLISH}"),
             (
                 "KOMPARATIV & SUPERLATIV",
                 "{ADJEKTIV};{ADJEKTIV_KOMPARATIV}, am {ADJEKTIV_SUPERLATIV}",
