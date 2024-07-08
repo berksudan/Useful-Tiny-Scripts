@@ -14,8 +14,8 @@ CATEGORY_DEU_TO_ENG_ARTIKEL_PLURAL = 'DEU -> ENG & ARTIKEL & PLURAL:'
 
 # Generate output filename based on input filename
 output_base_name = os.path.splitext(DATA_FILENAME)[0]
-OUTPUT_NEW_ENTRIES_FILENAME = f'{output_base_name}__new_translations.tsv'
-OUTPUT_UPDATED_ENTRIES_FILENAME = f'{output_base_name}__updated_translations.tsv'
+OUTPUT_NEW_ENTRIES_FILENAME = f'{output_base_name}__new_translations.csv'
+OUTPUT_UPDATED_ENTRIES_FILENAME = f'{output_base_name}__updated_translations.csv'
 
 pp = pprint.PrettyPrinter(indent=4)
 
