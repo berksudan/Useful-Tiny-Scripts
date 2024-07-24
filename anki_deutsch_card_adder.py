@@ -1,3 +1,4 @@
+import readline
 from collections import OrderedDict
 from typing import List
 import re
