@@ -2,6 +2,7 @@ import csv
 import pprint
 from collections import defaultdict
 import os
+import re
 
 DATA_FILENAME = 'Deutsche Übung.txt'
 DATA_DELIMITER = '\t'
@@ -18,6 +19,28 @@ OUTPUT_NEW_ENTRIES_FILENAME = f'{output_base_name}__new_translations.csv'
 OUTPUT_UPDATED_ENTRIES_FILENAME = f'{output_base_name}__updated_translations.csv'
 
 pp = pprint.PrettyPrinter(indent=4)
+
+def check_data_integrity(filename, delimiter):
+    pattern = re.compile(r'&\w+;')
+    offending_lines = []
+
+    with open(filename, 'r') as fp:
+        tsvreader = csv.reader(fp, delimiter=delimiter)
+        for row in tsvreader:
+            if row[0].startswith('#separator:') or row[0].startswith('#html:'):
+                continue
+            if len(row) < 2 or not row[0].strip() or not row[1].strip():
+                offending_lines.append(row)
+                continue
+            for field in row[:2]:
+                if pattern.search(field):
+                    offending_lines.append(row)
+                    break
+
+    if offending_lines:
+        for line in offending_lines:
+            print(f'Offending line: {line}')
+        raise ValueError('Dataset contains invalid HTML entities, empty strings in the first two columns, or similar patterns.')
 
 def read_deu_to_eng_data(filename, delimiter, tag_deu_to_eng):
     with open(filename, 'r') as fp:
@@ -64,13 +87,12 @@ def build_translation_dict(en_de_word_tuples):
             en_to_de_dict[word.strip()].add(de_word)
     return {en: ' | '.join(sorted(de_list)) for en, de_list in en_to_de_dict.items()}
 
-def filter_existing_translations(dict_eng_to_deu, data_eng_to_deu):
-    dict_eng_to_deu_existent = build_translation_dict(extract_eng_to_deu_word_tuples(data_eng_to_deu, CATEGORY_ENG_TO_DEU))
+def filter_existing_translations(dict_eng_to_deu_candidates, data_eng_to_deu_existent):
     
     new_entries = {}
     updated_entries = {}
     
-    for key, value in dict_eng_to_deu.items():
+    for key, value in dict_eng_to_deu_candidates.items():
         if key in dict_eng_to_deu_existent:
             if dict_eng_to_deu_existent[key] != value:
                 new_vals = value.split(' | ')
@@ -92,15 +114,19 @@ def build_new_translation_lines(entries:dict,category:str,filename:str):
             f.write(line + '\n')
 
 
+# Check for HTML entities and empty strings in the first two columns before processing
+check_data_integrity(DATA_FILENAME, DATA_DELIMITER)
 
 data_deu_to_eng = read_deu_to_eng_data(DATA_FILENAME, DATA_DELIMITER, TAG_DEU_TO_ENG)
-data_eng_to_deu = read_eng_to_deu_data(DATA_FILENAME, DATA_DELIMITER, TAG_ENG_TO_DEU)
 en_de_word_tuples = extract_deu_to_eng_word_tuples(data_deu_to_eng, CATEGORY_DEU_TO_ENG, CATEGORY_DEU_TO_ENG_ARTIKEL_PLURAL)
-dict_eng_to_deu = build_translation_dict(en_de_word_tuples)
+dict_eng_to_deu_candidates = build_translation_dict(en_de_word_tuples)
 
-new_entries, updated_entries = filter_existing_translations(dict_eng_to_deu, data_eng_to_deu)
+data_eng_to_deu = read_eng_to_deu_data(DATA_FILENAME, DATA_DELIMITER, TAG_ENG_TO_DEU)
+de_en_word_tuples = extract_eng_to_deu_word_tuples(data_eng_to_deu, CATEGORY_ENG_TO_DEU)
+dict_eng_to_deu_existent = build_translation_dict(de_en_word_tuples)
 
-pp.pprint(dict_eng_to_deu)
+new_entries, updated_entries = filter_existing_translations(dict_eng_to_deu_candidates, dict_eng_to_deu_existent)
+
 print("\nNew entries to be added:")
 pp.pprint(new_entries)
 print("\nEntries to be updated:")
