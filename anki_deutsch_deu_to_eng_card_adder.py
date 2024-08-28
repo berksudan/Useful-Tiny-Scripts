@@ -60,7 +60,7 @@ def extract_deu_to_eng_word_tuples(data, category_deu_to_eng, category_deu_to_en
             de_word = category[len(category_deu_to_eng):].strip()
             en_word = value
         elif category.startswith(category_deu_to_eng_artikel_plural):
-            de_word = category[len(category_deu_to_eng_artikel_plural):].strip()
+            de_word = value.split(',')[1].strip()
             en_word = value.split(',')[0].strip()
         else:
             raise ValueError(f'Unexpected category in row: {row[0]}')
