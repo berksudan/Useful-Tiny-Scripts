@@ -1,44 +1,63 @@
 #!/bin/bash
 
-## How to Use:
-##  1. Place this file into your backup disk (the disk you will use as a backup)
-##  2. Set DEF_SOURCE_DIR path as your main disk (the disk which contains the files needed to backup)
-##  3. Execute this bash file in Linux Terminal.
-##  4. Wait until the synchronization process ends. The backup disk may be damaged in case of some interruption during transfer.
+# Description:
+# This script facilitates backing up files from a source directory to the current directory.
+# It performs the following tasks:
+# 1. Asks for confirmation of the source directory, with an option to specify a different one.
+# 2. Checks if the source directory is mounted.
+# 3. Displays the content of the source directory and confirms its correctness.
+# 4. Executes a dry run of `rsync` to show what would be backed up or deleted.
+# 5. Asks for confirmation to proceed with the actual `rsync` backup.
+# 6. Excludes the script itself, common system directories, and temporary files during the backup.
+# 
+# Usage:
+# 1. Place this script on your backup disk (the disk where you want to store backups).
+# 2. Set the DEF_SOURCE_DIR path to point to your main disk (the disk with the files to back up).
+# 3. Run this script in a Linux terminal.
+# 4. Follow the prompts to verify directory paths and contents.
+# 5. The script will perform a dry run and, if confirmed, execute the actual backup.
 
 DEF_SOURCE_DIR="/media/${USER}/Seagate Expansion Drive/"
 
-read -p "[QUESTION] Is it the source directory: '$DEF_SOURCE_DIR'? [Y/n]: " yn
+echo_info() {
+    echo -e "\033[0;36m[INFO] $1\033[0m"
+}
+
+echo_error() {
+    echo -e "\e[91m[ERROR] $1\e[0m"
+}
+
+echo_question() {
+    echo -n -e "\e[33m[QUESTION] $1\e[0m"
+}
+
+echo_question "Is it the source directory: '$DEF_SOURCE_DIR'? [Y/n]: " && read yn
     case $yn in
         Y|y|"") source_dir=$DEF_SOURCE_DIR;;  
-        N|n|*) read -p "Please enter the source directory: " source_dir;;
+        N|n|*) read -p "Please enter the source directory: " source_dir ;;
     esac
-
-echo "[INFO] Source directory: '$source_dir'."
 
 
 if ! mountpoint -q "${source_dir}"
 then
-  echo "[ERROR] ${source_dir} is not mounted. Verify this by running: mount -l"
-  echo "exiting.."
+  echo_error "The source directory: '${source_dir}' could not be mounted. Verify this by running: 'mount -l'\nexiting.."
   exit 1
 else
-  echo "[INFO] ${source_dir} is mounted."
+  echo_info "The source directory: '${source_dir}' is successfully mounted."
 fi
 
 
-echo "[INFO] Content of the source directory: '$source_dir'."
+echo_info "Content of the source directory: '$source_dir':"
 ls -la "$source_dir"
-read -p "Is it the content of the source directory? [Y/n]: " yn
+echo_question "Is it the content of the source directory? [Y/n]: " && read yn
     case $yn in
         Y|y|"") ;;  
-        N|n|*) echo "exiting.."; exit 1 ;;
+        N|n|*) echo_info "exiting.."; exit 1 ;;
     esac
 
 backup_bash_filename=`basename "$0"`
 
-echo "[INFO] You will see a DRY RUN out of rsync, in 3 seconds.."
-sleep 3
+echo_info "You will see a DRY RUN out of rsync, in a few moment.."
 rsync --dry-run -avhP --delete \
     --exclude $backup_bash_filename \
     --exclude '$RECYCLE.BIN/' \
@@ -48,9 +67,10 @@ rsync --dry-run -avhP --delete \
 
 echo "-----------------------------"
 
-read -p "Are you satisfied with the DRY RUN and want to do an actual rsync? [y/N]:" yn
+# Confirm actual rsync
+echo_question "Proceed with the actual rsync? [y/N]: " && read yn
     case $yn in
-        N|n|"") echo "exiting.."; exit 1 ;;
+        N|n|"") echo_info "exiting.."; exit 1 ;;
         Y|y|*) rsync -avhP --delete \
     --exclude $backup_bash_filename \
     --exclude '$RECYCLE.BIN/' \
