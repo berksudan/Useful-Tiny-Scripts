@@ -53,7 +53,7 @@ def main():
 
     values = {}
     for var in variables:
-        values[var] = input(f"> Please provide a value for {BACK_CYAN}{FORE_BLACK}'{var}'{STYLE_RESET_ALL}: ")
+        values[var] = input(f"> Please provide a value for {BACK_CYAN}{FORE_BLACK}'{var}'{STYLE_RESET_ALL}: ").strip()
 
     # Replace variables in the text
     result = entry.format(**values)
