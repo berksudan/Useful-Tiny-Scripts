@@ -4,7 +4,14 @@ from collections import defaultdict
 import os
 import re
 
-DATA_FILENAME = 'Deutsche Übung.txt'
+HTML_TAGS_TO_REAL_SYMBOLS = {
+    '&#x27;': '\'',
+    '&quot;': '"',
+    '&amp;': '&',
+    '&nbsp;': ' ',
+    '&gt;': '>',
+}
+DATA_FILENAME = 'output/Deutsche Übung.txt'
 DATA_DELIMITER = '\t'
 OUTPUT_DELIMITER = ';'
 TAG_DEU_TO_ENG = 'DEU -> ENG'
@@ -21,13 +28,14 @@ OUTPUT_UPDATED_ENTRIES_FILENAME = f'{output_base_name}__updated_translations.csv
 pp = pprint.PrettyPrinter(indent=4)
 
 def check_data_integrity(filename, delimiter):
+
     pattern = re.compile(r'&\w+;')
     offending_lines = []
 
     with open(filename, 'r') as fp:
         tsvreader = csv.reader(fp, delimiter=delimiter)
         for row in tsvreader:
-            if row[0].startswith('#separator:') or row[0].startswith('#html:'):
+            if row[0].startswith('#separator:') or row[0].startswith('#html:') or row[0].startswith('#tags column:'):
                 continue
             if len(row) < 2 or not row[0].strip() or not row[1].strip():
                 offending_lines.append(row)
@@ -37,9 +45,14 @@ def check_data_integrity(filename, delimiter):
                     offending_lines.append(row)
                     break
 
-    if offending_lines:
+    if len(offending_lines) > 0:
         for line in offending_lines:
-            print(f'Offending line: {line}')
+            print(f'> Offending line: {line}')
+
+        print(f'> Use this table to replace these characters in the Anki deck:')
+        for key, val in HTML_TAGS_TO_REAL_SYMBOLS.items():
+            print(f'\t{key} -> <{val}>')
+
         raise ValueError('Dataset contains invalid HTML entities, empty strings in the first two columns, or similar patterns.')
 
 def read_deu_to_eng_data(filename, delimiter, tag_deu_to_eng):

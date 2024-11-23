@@ -1,0 +1,5 @@
+# Ignore input_deck directory
+input_deck/
+
+# Ignore output directory
+output/
