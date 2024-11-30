@@ -11,7 +11,7 @@ HTML_TAGS_TO_REAL_SYMBOLS = {
     '&nbsp;': ' ',
     '&gt;': '>',
 }
-DATA_FILENAME = 'output/Deutsche Übung.txt'
+DATA_FILENAME = 'input_deck/Deutsche Übung.txt'
 DATA_DELIMITER = '\t'
 OUTPUT_DELIMITER = ';'
 TAG_DEU_TO_ENG = 'DEU -> ENG'
@@ -21,9 +21,9 @@ CATEGORY_ENG_TO_DEU = f'{TAG_ENG_TO_DEU}:'
 CATEGORY_DEU_TO_ENG_ARTIKEL_PLURAL = 'DEU -> ENG & ARTIKEL & PLURAL:'
 
 # Generate output filename based on input filename
-output_base_name = os.path.splitext(DATA_FILENAME)[0]
-OUTPUT_NEW_ENTRIES_FILENAME = f'{output_base_name}__new_translations.csv'
-OUTPUT_UPDATED_ENTRIES_FILENAME = f'{output_base_name}__updated_translations.csv'
+output_base_name = os.path.splitext(DATA_FILENAME.split('/')[-1])[0]
+OUTPUT_NEW_ENTRIES_FILENAME = f'output/{output_base_name}__new_translations.csv'
+OUTPUT_UPDATED_ENTRIES_FILENAME = f'output/{output_base_name}__updated_translations.csv'
 
 pp = pprint.PrettyPrinter(indent=4)
 
