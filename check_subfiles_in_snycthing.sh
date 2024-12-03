@@ -16,6 +16,8 @@ excluded_dirs=(
     ".stversions"
     ".globalTrash"
     ".Links"
+    ".thumbnails"
+    ".stfolder*"
 )
 
 # Build the find command with exclusions
