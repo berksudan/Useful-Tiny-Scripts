@@ -1,0 +1,9 @@
+# Ignore the virtual environment folder
+venv/
+
+# Ignore the .env file containing sensitive environment variables
+.env
+
+# Ignore all files inside the glassdoor_job_pages/ directory but keep the folder
+glassdoor_job_pages/*
+!glassdoor_job_pages/.gitkeep
