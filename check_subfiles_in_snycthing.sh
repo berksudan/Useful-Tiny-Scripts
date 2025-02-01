@@ -12,6 +12,7 @@ script_name=$(basename "$0")
 
 # Define the directories to exclude
 excluded_dirs=(
+    "sdcard_audiobooks"
     ".deleteRecord"
     ".stversions"
     ".globalTrash"
