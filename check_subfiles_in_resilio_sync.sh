@@ -1,24 +1,14 @@
 #!/bin/bash
 
-# Description:
-# This script searches for files in the current directory and its subdirectories,
-# excluding those with .webp and .nomedia extensions, and specific directories (.deleteRecord,
-# .stversions, .globalTrash, .Links). It also excludes itself from the search results.
-# It helps in identifying the files that need cleaning or deletion.
-# Ideal for use in directories synced from a phone to a computer for backup purposes.
-
 # Get the name of the script file
 script_name=$(basename "$0")
 
 # Define the directories to exclude
 excluded_dirs=(
-    "sdcard_audiobooks"
-    ".deleteRecord"
-    ".stversions"
-    ".globalTrash"
+    "internal_audiobooks"
     ".Links"
     ".thumbnails"
-    ".stfolder*"
+    ".sync*"
 )
 
 # Build the find command with exclusions
