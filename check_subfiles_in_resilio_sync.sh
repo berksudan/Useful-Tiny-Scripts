@@ -25,7 +25,7 @@ excluded_dirs=(
 )
 
 # Build the find command as an array
-find_args=(find . -type f ! -name '*.webp' ! -name '.nomedia' ! -name "$script_name")
+find_args=(find . -type f ! -name '*.webp' ! -name '.trashed-*' ! -name '.nomedia' ! -name "$script_name")
 
 # Append exclusion patterns for each directory, using our escape function.
 for dir in "${excluded_dirs[@]}"; do
