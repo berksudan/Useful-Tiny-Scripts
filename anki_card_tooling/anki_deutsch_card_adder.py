@@ -1,6 +1,6 @@
 import readline
 from collections import OrderedDict
-from typing import List
+from typing import List, Optional
 import re
 import os
 import time
@@ -42,135 +42,135 @@ def enter_from_options(options: List[str], output_upper_case: bool = True):
     return output
 
 
-def resolve_token(token: str) -> str:
-    if token == "":
-        pass
-    elif token == "ICH_DU_ES":
-        ich = input(
-            '   > Enter a conjugation for "ich" (add ` mich` at the end if reflexive):'
-        ).lower()
-        du = input(
-            '   > Enter a conjugation for "du" (add ` dich` at the end if reflexive):'
-        ).lower()
-        er_sie_es = input(
-            '   > Enter a conjugation for "er/sie/es" (add ` sich` at the end if reflexive):'
-        ).lower()
-        check_words = [
-            ich.replace(" mich", ""),
-            du.replace(" dich", ""),
-            er_sie_es.replace(" sich", ""),
-        ]
-        for word in check_words:
-            if word.count(" ") > 1:
-                return None
-            if not word.replace(" ", "").isalpha():
-                return None
-        output = f"ich {ich}<br>du {du}<br>er/sie/es {er_sie_es}"
-    elif token == "WIR_IHR_SIE":
-        wir = input(
-            '   > Enter a conjugation for "wir" (add ` uns` at the end if reflexive):'
-        ).lower()
-        ihr = input(
-            '   > Enter a conjugation for "ihr" (add ` euch` at the end if reflexive):'
-        ).lower()
-        sie_sie = input(
-            '   > Enter a conjugation for "Sie/sie" (add ` sich` at the end if reflexive):'
-        ).lower()
-        check_words = [
-            wir.replace(" uns", ""),
-            ihr.replace(" euch", ""),
-            sie_sie.replace(" sich", ""),
-        ]
-        for word in check_words:
-            if word.count(" ") > 1:
-                return None
-            if not word.replace(" ", "").isalpha():
-                return None
-        output = f"wir {wir}<br>ihr {ihr}<br>Sie/sie {sie_sie}"
-    elif token == "ADJEKTIV":
-        output = input("   > Enter an adjective:").lower()
-        if not output.isalpha():
+
+def resolve_token(token: str) -> str | None:
+    """
+    Prompt the user to resolve various token types into their string outputs.
+    Returns the trimmed output or None if the input was invalid/empty.
+    """
+    match token:
+        case "":  # empty token → no action
             return None
-    elif token == "ADJEKTIV_KOMPARATIV":
-        output = input("   > Enter a comparative adjective:").lower()
-        if not output.isalpha():
-            return None
-    elif token == "ADJEKTIV_SUPERLATIV":
-        output = input('   > Enter a superlativ adjective (without "am"):').lower()
-        if not output.isalpha():
-            return None
-    elif token.startswith("STR_GERMAN"):
-        output = input("   > Enter a German text:")
-    elif token.startswith("STR_ENGLISH"):
-        output = input("   > Enter an English text:")
-    elif token.startswith("STR_ANY"):
-        output = input("   > Enter any text:")
-    elif token == "NOUN_SINGULAR":
-        output = input("   > Enter a singular noun:").title()
-        if not output.isalpha():
-            return None
-    elif token.startswith("VERB_"):
-        form = token.split("VERB_")[1].lower()
-        assert form in ("present", "perfekt", "präteritum")
-        output = input(
-            f"   > Enter a verb in a {form} form (add `sich ` at the beginning if reflexive):"
-        ).lower()
-        if not output.replace("*", "").replace("sich ", "").replace(" ", "").isalpha():
-            return None
-    elif token == "ARTIKEL":
-        output = enter_from_options(["der", "die", "das"], output_upper_case=False)
-    elif token == "HAT_IST":
-        output = enter_from_options(
-            options=["hat", "ist", "both"], output_upper_case=True
-        )
-        if output == "BOTH":
-            output = "HAT/IST"
-    elif token == "AKK_DAT":
-        output = enter_from_options(
-            options=["akkusativ", "dativ"], output_upper_case=True
-        )
-    elif token == "PREPOSITION":
-        list_prepositions = [
-            "an",
-            "auf",
-            "aus",
-            "bei",
-            "durch",
-            "für",
-            "gegen",
-            "mit",
-            "nach",
-            "ohne",
-            "um",
-            "unter",
-            "über",
-            "von",
-            "vor",
-            "zu",
-        ]
-        output = enter_from_options(list_prepositions, output_upper_case=True)
-    elif token == "OPTIONAL_PLURAL":
-        selection = input("   > Does this word have a plural form? (Y/n):").lower()
-        if selection == "n":
-            output = "NO PLURAL"
-        else:
-            output = input("   > Enter a plural noun without artikel:").title()
-            if not output.isalpha():
+
+        case "ICH_DU_ES":
+            ich = input(
+                '   > Enter a conjugation for "ich" (add ` mich` at the end if reflexive): '
+            ).lower()
+            du = input(
+                '   > Enter a conjugation for "du" (add ` dich` at the end if reflexive): '
+            ).lower()
+            er_sie_es = input(
+                '   > Enter a conjugation for "er/sie/es" (add ` sich` at the end if reflexive): '
+            ).lower()
+
+            # Validate that each cleaned word is single‑ or two‑part and alphabetic
+            for word in (ich.replace(" mich", ""), du.replace(" dich", ""), er_sie_es.replace(" sich", "")):
+                if word.count(" ") > 1 or not word.replace(" ", "").isalpha():
+                    return None
+
+            output = f"ich {ich}<br>du {du}<br>er/sie/es {er_sie_es}"
+
+        case "WIR_IHR_SIE":
+            wir = input(
+                '   > Enter a conjugation for "wir" (add ` uns` at the end if reflexive): '
+            ).lower()
+            ihr = input(
+                '   > Enter a conjugation for "ihr" (add ` euch` at the end if reflexive): '
+            ).lower()
+            sie_sie = input(
+                '   > Enter a conjugation for "Sie/sie" (add ` sich` at the end if reflexive): '
+            ).lower()
+
+            for word in (wir.replace(" uns", ""), ihr.replace(" euch", ""), sie_sie.replace(" sich", "")):
+                if word.count(" ") > 1 or not word.replace(" ", "").isalpha():
+                    return None
+
+            output = f"wir {wir}<br>ihr {ihr}<br>Sie/sie {sie_sie}"
+
+        case "ADJEKTIV":
+            adj = input("   > Enter an adjective: ").lower()
+            if not adj.isalpha():
                 return None
-            output = "die " + output
-    else:
-        raise ValueError("Wrong Token")
-    output = output.strip()
-    if output == "":
-        return None
-    return output.strip()
+            output = adj
+
+        case "ADJEKTIV_KOMPARATIV":
+            comp = input("   > Enter a comparative adjective: ").lower()
+            if not comp.isalpha():
+                return None
+            output = comp
+
+        case "ADJEKTIV_SUPERLATIV":
+            superl = input('   > Enter a superlativ adjective (without "am"): ').lower()
+            if not superl.isalpha():
+                return None
+            output = superl
+
+        case t if t.startswith("STR_GERMAN"):
+            output = input("   > Enter a German text: ")
+
+        case t if t.startswith("STR_ENGLISH"):
+            output = input("   > Enter an English text: ")
+
+        case t if t.startswith("STR_ANY"):
+            output = input("   > Enter any text: ")
+
+        case "NOUN_SINGULAR":
+            noun = input("   > Enter a singular noun: ").title()
+            if not noun.isalpha():
+                return None
+            output = noun
+
+        case t if t.startswith("VERB_"):
+            form = t.split("VERB_")[1].lower()
+            assert form in ("present", "perfekt", "präteritum")
+            verb = input(
+                f"   > Enter a verb in {form} form (add `sich ` at the beginning if reflexive): "
+            ).lower()
+            cleaned = verb.replace("*", "").replace("sich ", "").replace(" ", "")
+            if not cleaned.isalpha():
+                return None
+            output = verb
+
+        case "ARTIKEL":
+            output = enter_from_options(["der", "die", "das"], output_upper_case=False)
+
+        case "HAT_IST":
+            choice = enter_from_options(["hat", "ist", "both"], output_upper_case=True)
+            output = "HAT/IST" if choice == "BOTH" else choice
+
+        case "AKK_DAT":
+            output = enter_from_options(["akkusativ", "dativ"], output_upper_case=True)
+
+        case "PREPOSITION":
+            preps = [
+                "an", "auf", "aus", "bei", "durch", "für", "gegen",
+                "mit", "nach", "ohne", "um", "unter", "über", "von", "vor", "zu",
+            ]
+            output = enter_from_options(preps, output_upper_case=True)
+
+        case "OPTIONAL_PLURAL":
+            sel = input("   > Does this word have a plural form? (Y/n): ").lower()
+            if sel == "n":
+                output = "NO PLURAL"
+            else:
+                pl = input("   > Enter a plural noun without artikel: ").title()
+                if not pl.isalpha():
+                    return None
+                output = f"die {pl}"
+
+        case _:  # fallback for any other token
+            raise ValueError("Wrong Token")
+
+    # Final cleanup and empty‑string check
+    result = output.strip()
+    return result if result else None
 
 
 def anki_deutsch_csv_row() -> str:
     categories = OrderedDict(
         [
             (
-                "ARTIKEL & PLURAL",
+                "ARTIKEL ⋀ PLURAL",
                 "{NOUN_SINGULAR};{ARTIKEL} {NOUN_SINGULAR}, {OPTIONAL_PLURAL}",
             ),
             ("AKKUSATIVFORM", "{STR_GERMAN_1};{STR_GERMAN_2}"),
@@ -178,23 +178,23 @@ def anki_deutsch_csv_row() -> str:
             ("DATIVFORM", "{STR_GERMAN_1};{STR_GERMAN_2}"),
             ("HAT/IST + PERFEKT", "{VERB_PRESENT};{HAT_IST} + {VERB_PERFEKT}"),
             (
-                "PRÄTERITUM & HAT/IST + PERFEKT",
+                "PRÄTERITUM ⋀ HAT/IST + PERFEKT",
                 "{VERB_PRESENT};{VERB_PRÄTERITUM}, {HAT_IST} + {VERB_PERFEKT}",
             ),
             (
-                "DEU -> ENG & ARTIKEL & PLURAL",
+                "DEU → ENG ⋀ ARTIKEL ⋀ PLURAL",
                 "{NOUN_SINGULAR};{STR_ENGLISH}, {ARTIKEL} {NOUN_SINGULAR}, {OPTIONAL_PLURAL}",
             ),
-            ("DEU -> ENG", "{STR_GERMAN};{STR_ENGLISH}"),
+            ("DEU → ENG", "{STR_GERMAN};{STR_ENGLISH}"),
             (
-                "KOMPARATIV & SUPERLATIV",
+                "KOMPARATIV ⋀ SUPERLATIV",
                 "{ADJEKTIV};{ADJEKTIV_KOMPARATIV}, am {ADJEKTIV_SUPERLATIV}",
             ),
             ("KOMPARATIV", "{ADJEKTIV};{ADJEKTIV_KOMPARATIV}"),
             ("KONJUGATION (ICH/DU/ES)", "{VERB_PRESENT};{ICH_DU_ES}"),
             ("KONJUGATION (WIR/IHR/SIE)", "{VERB_PRESENT};{WIR_IHR_SIE}"),
             (
-                "PRÄPOSITION & AKKUSATIV/DATIV",
+                "PRÄPOSITION ⋀ AKKUSATIV/DATIV",
                 "{VERB_PRESENT};{VERB_PRESENT} + {PREPOSITION} + {AKK_DAT}",
             ),
             ("QUIZFRAGE", "{STR_ANY_1};{STR_ANY_2}"),

@@ -1,149 +1,261 @@
+#!/usr/bin/env python3
+
+import re
 import csv
 import pprint
-from collections import defaultdict
-import os
-import re
+from pathlib import Path
+from enum import Enum
+from typing import (
+    Final,
+    List,
+    Tuple,
+    Dict,
+    Set,
+    Pattern,
+)
+from typing_extensions import Literal
+from dataclasses import dataclass
 
-HTML_TAGS_TO_REAL_SYMBOLS = {
-    '&#x27;': '\'',
-    '&quot;': '"',
-    '&amp;': '&',
-    '&nbsp;': ' ',
-    '&gt;': '>',
+#─── Constants ────────────────────────────────────────────────────────────────
+
+#: Mapping of HTML entities to their literal replacements
+HTML_CATEGORYS_TO_REAL_SYMBOLS: Final[Dict[str, str]] = {
+    "&#x27;": "'",
+    "&quot;": '"',
+    "&amp;": "&",
+    "&nbsp;": " ",
+    "&gt;": ">",
 }
-DATA_FILENAME = 'input_deck/Deutsche Übung.txt'
-DATA_DELIMITER = '\t'
-OUTPUT_DELIMITER = ';'
-TAG_DEU_TO_ENG = 'DEU -> ENG'
-TAG_ENG_TO_DEU = 'ENG -> DEU'
-CATEGORY_DEU_TO_ENG = f'{TAG_DEU_TO_ENG}:'
-CATEGORY_ENG_TO_DEU = f'{TAG_ENG_TO_DEU}:'
-CATEGORY_DEU_TO_ENG_ARTIKEL_PLURAL = 'DEU -> ENG & ARTIKEL & PLURAL:'
 
-# Generate output filename based on input filename
-output_base_name = os.path.splitext(DATA_FILENAME.split('/')[-1])[0]
-OUTPUT_NEW_ENTRIES_FILENAME = f'output/{output_base_name}__new_translations.csv'
-OUTPUT_UPDATED_ENTRIES_FILENAME = f'output/{output_base_name}__updated_translations.csv'
+NO_SINGULAR_TAG = "NO SINGULAR"
 
-pp = pprint.PrettyPrinter(indent=4)
 
-def check_data_integrity(filename, delimiter):
+@dataclass(frozen=True,kw_only=True)
+class InputData:
+    """Input deck configuration."""
+    FILEPATH: Final[Path] = Path("input_deck") / "Deutsche Übung.txt"
+    FILENAME = FILEPATH.stem
+    DELIMITER: Final[Literal["\t"]] = "\t"
 
-    pattern = re.compile(r'&\w+;')
-    offending_lines = []
+@dataclass(frozen=True,kw_only=True)
+class OutputData:
+    """Output files and directories."""
+    DELIMITER: Final[Literal[";"]] = ";"
+    PARENT_DIR: Final[Path] = Path("output")
+    NEW_ENTRIES_FILEPATH = f"{PARENT_DIR}/new_translations.csv"
+    UPDATED_ENTRIES_FILEPATH = f"{PARENT_DIR}/updated_translations.csv"
 
-    with open(filename, 'r') as fp:
-        tsvreader = csv.reader(fp, delimiter=delimiter)
-        for row in tsvreader:
-            if row[0].startswith('#separator:') or row[0].startswith('#html:') or row[0].startswith('#tags column:'):
+@dataclass(frozen=True,kw_only=True)
+class DeuToEng:
+    """German→English tags in the deck."""
+    CATEGORY = "DEU → ENG"
+    PREFIX_SIMPLE = f"{CATEGORY}:"
+    PREFIX_ARTIKEL_PLURAL = f"{CATEGORY} ⋀ ARTIKEL ⋀ PLURAL:"
+
+@dataclass(frozen=True,kw_only=True)
+class EngToDeu:
+    """English→German tags in the deck."""
+    CATEGORY = "ENG → DEU"
+    PREFIX_SIMPLE = f"{CATEGORY}:"
+
+
+pp: Final[pprint.PrettyPrinter] = pprint.PrettyPrinter(indent=4)
+
+#─── Functions ────────────────────────────────────────────────────────────────
+
+def check_data_integrity(
+    filepath: Path,
+    delimiter: str
+) -> None:
+    """
+    Verify that the first two columns of the TSV do not contain empty values
+    or HTML-entity patterns like &...; (except in the #separator/html/tags lines).
+    Raises ValueError if any offending rows are found.
+    """
+    pattern: Pattern[str] = re.compile(r"&\w+;")
+    offending: List[List[str]] = []
+
+    with filepath.open("r", encoding="utf-8") as fp:
+        reader = csv.reader(fp, delimiter=delimiter)
+        for row in reader:
+            if any(row[0].startswith(pref) for pref in ("#separator:", "#html:", "#tags column:")):
                 continue
             if len(row) < 2 or not row[0].strip() or not row[1].strip():
-                offending_lines.append(row)
+                offending.append(row)
                 continue
-            for field in row[:2]:
-                if pattern.search(field):
-                    offending_lines.append(row)
-                    break
+            if pattern.search(row[0]) or pattern.search(row[1]):
+                offending.append(row)
 
-    if len(offending_lines) > 0:
-        for line in offending_lines:
-            print(f'> Offending line: {line}')
+    if offending:
+        for row in offending:
+            print(f"> Offending line: {row}")
+        print("> Use this mapping to replace in Anki deck:")
+        for src, tgt in HTML_CATEGORYS_TO_REAL_SYMBOLS.items():
+            print(f"\t{src} -> {tgt}")
+        raise ValueError("Dataset contains invalid HTML entities or empty first-two columns.")
 
-        print(f'> Use this table to replace these characters in the Anki deck:')
-        for key, val in HTML_TAGS_TO_REAL_SYMBOLS.items():
-            print(f'\t{key} -> <{val}>')
 
-        raise ValueError('Dataset contains invalid HTML entities, empty strings in the first two columns, or similar patterns.')
+def read_tuples(
+    filepath: Path,
+    delimiter: str,
+    category: str
+) -> List[Tuple[str, str]]:
+    """
+    Read all rows containing `category` in the first column, returning a list of
+    (category, value) tuples (first two columns only, value stripped).
+    """
+    out: List[Tuple[str, str]] = []
+    with filepath.open("r", encoding="utf-8") as fp:
+        reader = csv.reader(fp, delimiter=delimiter)
+        for row in reader:
+            if category in row[0]:
+                out.append((row[0], row[1].strip()))
+    return out
 
-def read_deu_to_eng_data(filename, delimiter, tag_deu_to_eng):
-    with open(filename, 'r') as fp:
-        tsvreader = csv.reader(fp, delimiter=delimiter)
-        return [row[:2] for row in tsvreader if tag_deu_to_eng in row[0]]
 
-def read_eng_to_deu_data(filename, delimiter, tag_eng_to_deu):
-    with open(filename, 'r') as fp:
-        tsvreader = csv.reader(fp, delimiter=delimiter)
-        return [row[:2] for row in tsvreader if tag_eng_to_deu in row[0]]
-
-def extract_deu_to_eng_word_tuples(data, category_deu_to_eng, category_deu_to_eng_artikel_plural):
-    en_de_word_tuples = []
-    for row in data:
-        category, value = row[0], row[1].strip()
-        if category.startswith(category_deu_to_eng):
-            de_word = category[len(category_deu_to_eng):].strip()
-            en_word = value
-        elif category.startswith(category_deu_to_eng_artikel_plural):
-            de_word = value.split(',')[1].strip()
-            en_word = value.split(',')[0].strip()
+def extract_deu_to_eng(
+    data: List[Tuple[str, str]],
+    prefix_simple: str,
+    prefix_artikel_plural: str
+) -> List[Tuple[str, str]]:
+    """
+    From raw DEU → ENG rows, extract (english, german) tuples.
+    Handles normal entries and 'Artikel ⋀ Plural' entries.
+    """
+    out: List[Tuple[str, str]] = []
+    for cat, val in data:
+        if cat.startswith(prefix_simple):
+            de_word = cat[len(prefix_simple):].strip()
+            en_word = val
+        elif cat.startswith(prefix_artikel_plural):
+            parts = [p.strip() for p in val.split(",")]
+            en_word = parts[0]
+            de_word = parts[1] if parts[1] != NO_SINGULAR_TAG else parts[2]
         else:
-            raise ValueError(f'Unexpected category in row: {row[0]}')
-        en_de_word_tuples.append((en_word, de_word))
-    return en_de_word_tuples
+            raise ValueError(f"Unexpected category in row: {cat!r}")
+        out.append((en_word, de_word))
+    return out
 
-def extract_eng_to_deu_word_tuples(data, category_eng_to_deu):
-    de_en_word_tuples = []
-    for row in data:
-        category, value = row[0], row[1].strip()
-        if category.startswith(category_eng_to_deu):
-            en_word = category[len(category_eng_to_deu):].strip()
-            de_word = value
+
+def extract_eng_to_deu(
+    data: List[Tuple[str, str]],
+    prefix_simple: str
+) -> List[Tuple[str, str]]:
+    """
+    From raw ENG → DEU rows, extract (english, german) tuples.
+    """
+    out: List[Tuple[str, str]] = []
+    for cat, val in data:
+        if cat.startswith(prefix_simple):
+            en_word = cat[len(prefix_simple):].strip()
+            de_word = val
         else:
-            raise ValueError(f'Unexpected category in row: {row[0]}')
-        de_en_word_tuples.append((en_word, de_word))
-    return de_en_word_tuples
+            raise ValueError(f"Unexpected category in row: {cat!r}")
+        out.append((en_word, de_word))
+    return out
 
-def build_translation_dict(en_de_word_tuples):
-    en_to_de_dict = defaultdict(set)
-    for en_word, de_word in en_de_word_tuples:
-        en_words = en_word.split(' | ')
-        for word in en_words:
-            en_to_de_dict[word.strip()].add(de_word)
-    return {en: ' | '.join(sorted(de_list)) for en, de_list in en_to_de_dict.items()}
 
-def filter_existing_translations(dict_eng_to_deu_candidates, data_eng_to_deu_existent):
-    
-    new_entries = {}
-    updated_entries = {}
-    
-    for key, value in dict_eng_to_deu_candidates.items():
-        if key in dict_eng_to_deu_existent:
-            if dict_eng_to_deu_existent[key] != value:
-                new_vals = value.split(' | ')
-                existent_vals = dict_eng_to_deu_existent[key].split(' | ')
-                if set(new_vals) - set(existent_vals):
-                    updated_entries[key] = ' | '.join(sorted(set(new_vals) | set(existent_vals)))
+def build_translation_dict(
+    pairs: List[Tuple[str, str]]
+) -> Dict[str, str]:
+    """
+    Build a dict mapping each English word (or phrase) to its German translations,
+    joined by ' | ' if multiple.
+    """
+    temp: Dict[str, Set[str]] = {}
+    for en, de in pairs:
+        for w in en.split(" | "):
+            key = w.strip()
+            temp.setdefault(key, set()).add(de)
+    return {en: " | ".join(sorted(dset)) for en, dset in temp.items()}
+
+
+def filter_existing(
+    candidates: Dict[str, str],
+    existent: Dict[str, str]
+) -> Tuple[Dict[str, str], Dict[str, str]]:
+    """
+    Compare candidate translations against existing ones.
+    Returns (new_entries, updated_entries).
+    """
+    new_ent: Dict[str, str] = {}
+    upd_ent: Dict[str, str] = {}
+
+    for key, val in candidates.items():
+        if key not in existent:
+            new_ent[key] = val
         else:
-            new_entries[key] = value
-    
-    return new_entries, updated_entries
+            old_set = set(existent[key].split(" | "))
+            new_set = set(val.split(" | "))
+            if new_set - old_set:
+                combined = sorted(old_set | new_set)
+                upd_ent[key] = " | ".join(combined)
 
-def build_new_translation_lines(entries:dict,category:str,filename:str):
-    entry_lines = []
-    for key, value in entries.items():
-        entry_lines.append(f'{category} {key}{OUTPUT_DELIMITER}{value}')
-
-    with open(filename, 'w') as f:
-        for line in entry_lines:
-            f.write(line + '\n')
+    return new_ent, upd_ent
 
 
-# Check for HTML entities and empty strings in the first two columns before processing
-check_data_integrity(DATA_FILENAME, DATA_DELIMITER)
+def write_lines(
+    entries: Dict[str, str],
+    prefix: str,
+    outpath: Path,
+    delimiter: str
+) -> None:
+    """
+    Write out entries as lines of the form:
+      {prefix} {key}{delimiter}{value}
+    Creates parent dirs if needed.
+    """
+    outpath.parent.mkdir(parents=True, exist_ok=True)
+    with outpath.open("w", encoding="utf-8") as fp:
+        for key, val in entries.items():
+            fp.write(f"{prefix} {key}{delimiter}{val}\n")
 
-data_deu_to_eng = read_deu_to_eng_data(DATA_FILENAME, DATA_DELIMITER, TAG_DEU_TO_ENG)
-en_de_word_tuples = extract_deu_to_eng_word_tuples(data_deu_to_eng, CATEGORY_DEU_TO_ENG, CATEGORY_DEU_TO_ENG_ARTIKEL_PLURAL)
-dict_eng_to_deu_candidates = build_translation_dict(en_de_word_tuples)
 
-data_eng_to_deu = read_eng_to_deu_data(DATA_FILENAME, DATA_DELIMITER, TAG_ENG_TO_DEU)
-de_en_word_tuples = extract_eng_to_deu_word_tuples(data_eng_to_deu, CATEGORY_ENG_TO_DEU)
-dict_eng_to_deu_existent = build_translation_dict(de_en_word_tuples)
+def main() -> None:
+    """Main processing pipeline."""
+    # 1. Integrity check
+    check_data_integrity(InputData.FILEPATH, InputData.DELIMITER)
 
-new_entries, updated_entries = filter_existing_translations(dict_eng_to_deu_candidates, dict_eng_to_deu_existent)
+    # 2. Read & extract DEU → ENG
+    deu_raw = read_tuples(InputData.FILEPATH, InputData.DELIMITER, DeuToEng.CATEGORY)
+    deu_pairs = extract_deu_to_eng(
+        deu_raw,
+        DeuToEng.PREFIX_SIMPLE,
+        DeuToEng.PREFIX_ARTIKEL_PLURAL
+    )
+    candidates = build_translation_dict(deu_pairs)
 
-print("\nNew entries to be added:")
-pp.pprint(new_entries)
-print("\nEntries to be updated:")
-pp.pprint(updated_entries)
+    # 3. Read & extract ENG → DEU
+    eng_raw = read_tuples(InputData.FILEPATH, InputData.DELIMITER, EngToDeu.CATEGORY)
+    eng_pairs = extract_eng_to_deu(
+        eng_raw,
+        EngToDeu.PREFIX_SIMPLE
+    )
+    existing = build_translation_dict(eng_pairs)
 
-build_new_translation_lines(new_entries, CATEGORY_ENG_TO_DEU,OUTPUT_NEW_ENTRIES_FILENAME)
-build_new_translation_lines(updated_entries,CATEGORY_ENG_TO_DEU,OUTPUT_UPDATED_ENTRIES_FILENAME)
+    # 4. Filter new vs. updated
+    new_entries, updated_entries = filter_existing(candidates, existing)
+
+    # 5. Report
+    print("\nNew entries to be added:")
+    pp.pprint(new_entries)
+    print("\nEntries to be updated:")
+    pp.pprint(updated_entries)
+
+    # 6. Write out CSVs
+    write_lines(
+        new_entries,
+        EngToDeu.PREFIX_SIMPLE,
+        Path(OutputData.NEW_ENTRIES_FILEPATH),
+        OutputData.DELIMITER
+    )
+    write_lines(
+        updated_entries,
+        EngToDeu.PREFIX_SIMPLE,
+        Path(OutputData.UPDATED_ENTRIES_FILEPATH),
+        OutputData.DELIMITER
+    )
+
+
+if __name__ == "__main__":
+    main()
