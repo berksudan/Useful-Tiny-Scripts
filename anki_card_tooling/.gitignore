@@ -6,6 +6,3 @@ output/
 
 # MyPy Cache
 .mypy_cache
-
-# New Anki Cards
-new_anki_cards.csv

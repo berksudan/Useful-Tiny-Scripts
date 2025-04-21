@@ -261,4 +261,4 @@ def anki_deutsch_adder(filename: str):
 
 
 if __name__ == "__main__":
-    anki_deutsch_adder(filename="new_anki_cards.csv")
+    anki_deutsch_adder(filename="output/new_anki_cards.csv")
