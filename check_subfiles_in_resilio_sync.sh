@@ -57,7 +57,10 @@ find_and_report() {
   # Append exclusions for each directory
   for dir in "${excluded_dirs[@]}"; do
     local esc_dir; esc_dir=$(escape_for_find "$dir")
-    args+=( ! -path "${base_dir}/*/$esc_dir/*" )
+    # exclude files in ./<dir>/*
+    args+=( ! -path "${base_dir}/${esc_dir}/*" )
+    # exclude files in ./<any>/<dir>/*
+    args+=( ! -path "${base_dir}/*/${esc_dir}/*" )
   done
 
   # Execute
