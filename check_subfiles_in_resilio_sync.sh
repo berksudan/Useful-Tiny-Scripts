@@ -91,7 +91,7 @@ trash_all_but_newest() {
   fi
 
   # Find regular files, sort lexicographically, drop the newest (last) and trash the rest
-  find "$target_dir" -maxdepth 1 -type f \
+  find "$target_dir" -maxdepth 1 -type f ! -name '.*' \
     | sort \
     | head -n -1 \
     | while IFS= read -r file; do
