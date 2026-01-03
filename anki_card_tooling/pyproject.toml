@@ -1,0 +1,15 @@
+[project]
+name = "anki_card_tooling"
+version = "0.1.0"
+
+requires-python = ">=3.15"
+dependencies = [
+    "ruff==0.14.10",
+]
+
+[tool.poetry.dependencies]
+python = ">=3.15"
+pydantic = "2.12.5"
+
+[tool.poetry.dev-dependencies]
+ruff = "0.14.10"

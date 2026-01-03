@@ -1,8 +1,14 @@
 # Ignore input_deck directory
-input_deck/
+anki_card_tooling/input_deck/
 
 # Ignore output directory
-output/
+anki_card_tooling/output/
 
 # MyPy Cache
 .mypy_cache
+
+.venv
+
+.idea
+
+*.egg-info
