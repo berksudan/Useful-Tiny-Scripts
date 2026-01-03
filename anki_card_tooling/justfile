@@ -1,6 +1,6 @@
 set shell := ["bash", "-cu"]
 
-PYTHON := "3.15"
+PYTHON := "3.14"
 VENV := ".venv"
 
 default:
