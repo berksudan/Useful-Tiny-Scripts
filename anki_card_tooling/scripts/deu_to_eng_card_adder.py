@@ -2,7 +2,6 @@ import collections
 import csv
 import dataclasses
 import enum
-import functools
 import pathlib
 import pprint
 import re
@@ -10,7 +9,7 @@ import typing
 
 import pydantic
 
-from scripts.shared import CardCategory, AnkiCard
+from scripts.shared import AnkiCard, CardCategory
 
 
 class _MetadataTag(enum.StrEnum):
@@ -31,20 +30,6 @@ class _Config:
     input_filepath: pathlib.Path
     output_file_delimiter: str
     output_filepath: pathlib.Path
-
-    @functools.cached_property
-    def _split_front(self) -> list[str]:
-        return self.front.split(": ")
-
-    @functools.cached_property
-    def category(self) -> CardCategory:
-        card_category_str, front_without_category = self._split_front
-        return CardCategory(card_category_str)
-
-    @functools.cached_property
-    def front_without_category(self) -> str:
-        _, front_without_category = self._split_front
-        return front_without_category
 
 
 def _fetch_cards(*, raw_rows: list[list[str]]) -> list[AnkiCard]:

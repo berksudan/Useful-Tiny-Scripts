@@ -104,3 +104,17 @@ class AnkiCard(pydantic.BaseModel):
         return ColorCode.block(
             ColorCode.BACK_CYAN, ColorCode.FORE_BLACK, text=self.to_str
         )
+
+    @functools.cached_property
+    def _split_front(self) -> list[str]:
+        return self.front.split(": ")
+
+    @functools.cached_property
+    def category(self) -> CardCategory:
+        card_category_str, front_without_category = self._split_front
+        return CardCategory(card_category_str)
+
+    @functools.cached_property
+    def front_without_category(self) -> str:
+        _, front_without_category = self._split_front
+        return front_without_category
