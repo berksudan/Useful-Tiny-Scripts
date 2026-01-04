@@ -1,44 +1,159 @@
-import os
+import dataclasses
+import enum
+import pathlib
 import re
 import time
-from collections import OrderedDict
-from typing import List
 
-BACK_CYAN = "\x1b[46m"  # Taken from the Back.CYAN of the Colorama package
-BACK_YELLOW = "\x1b[43m"  # Taken from the Back.YELLOW of the Colorama package
-FORE_BLACK = "\x1b[30m"  # Taken from the Fore.BLACK of the Colorama package
-FORE_MAGENTA = "\x1b[35m"  # Taken from the Fore.MAGENTA of the Colorama package
-FORE_RED = "\x1b[31m"  # Taken from the Fore.RED of the Colorama package
-FORE_YELLOW = "\x1b[33m"  # Taken from the Fore.YELLOW of the Colorama package
-STYLE_RESET_ALL = "\x1b[0m"  # Taken from the Style.RESET_ALL of the Colorama package
+from scripts.shared import AnkiCard, CardCategory, ColorCode
 
 
-def enter_category_index(category_keys: List[int]) -> int:
-    category_indexes = [str(item) for item in list(range(len(category_keys)))]
+class _Preposition(enum.StrEnum):
+    AN = "AN"
+    AUF = "AUF"
+    AUS = "AUS"
+    BEI = "BEI"
+    DURCH = "DURCH"
+    FUER = "FÜR"
+    GEGEN = "GEGEN"
+    MIT = "MIT"
+    NACH = "NACH"
+    OHNE = "OHNE"
+    UM = "UM"
+    UNTER = "UNTER"
+    UEBER = "ÜBER"
+    VON = "VON"
+    VOR = "VOR"
+    ZU = "ZU"
+
+
+class _Artikel(enum.StrEnum):
+    DER = "der"
+    DIE = "die"
+    DAS = "das"
+
+
+class _AuxiliaryVerbChoice(enum.StrEnum):
+    HAT = "HAT"
+    IST = "IST"
+    BOTH = "HAT/IST"
+
+
+class _GrammaticalCase(enum.StrEnum):
+    AKKUSATIV = "AKKUSATIV"
+    DATIV = "DATIV"
+
+
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class _CardCategoryWithFormat:
+    category: CardCategory
+    format: str  # TODO: Can change
+
+
+class _Logger:
+    @staticmethod
+    def info(*args: str) -> None:
+        print("[INFO] ", *args)
+
+    @staticmethod
+    def warn(*args: str) -> None:
+        print("[WARN] ", *args)
+
+    @staticmethod
+    def error(*args: str) -> None:
+        print("[ERROR] ", *args)
+
+    @staticmethod
+    def entry(s: str) -> None:
+        input("> " + s)
+
+
+LOGGER = _Logger()
+
+_CATEGORY_WITH_FORMATS: list[_CardCategoryWithFormat] = [
+    _CardCategoryWithFormat(
+        category=CardCategory.ARTIKEL_PLURAL,
+        format="{NOUN_SINGULAR};{ARTIKEL} {NOUN_SINGULAR}, {OPTIONAL_PLURAL}",
+    ),
+    _CardCategoryWithFormat(
+        category=CardCategory.AKKUSATIVFORM,
+        format="{STR_GERMAN_1};{STR_GERMAN_2}",
+    ),
+    _CardCategoryWithFormat(
+        category=CardCategory.AUFFORDERUNG,
+        format="{STR_GERMAN};{STR_ENGLISH}",
+    ),
+    _CardCategoryWithFormat(
+        category=CardCategory.DATIVFORM,
+        format="{STR_GERMAN_1};{STR_GERMAN_2}",
+    ),
+    _CardCategoryWithFormat(
+        category=CardCategory.HAT_IST_PERFEKT,
+        format="{VERB_PRESENT};{HAT_IST} + {VERB_PERFEKT}",
+    ),
+    _CardCategoryWithFormat(
+        category=CardCategory.PRAETERITUM_HAT_IST_PERFEKT,
+        format="{VERB_PRESENT};{VERB_PRÄTERITUM}, {HAT_IST} + {VERB_PERFEKT}",
+    ),
+    _CardCategoryWithFormat(
+        category=CardCategory.DEU_TO_ENG_ARTIKEL_PLURAL,
+        format="{NOUN_SINGULAR};{STR_ENGLISH}, {ARTIKEL} {NOUN_SINGULAR}, {OPTIONAL_PLURAL}",
+    ),
+    _CardCategoryWithFormat(
+        category=CardCategory.DEU_TO_ENG,
+        format="{STR_GERMAN};{STR_ENGLISH}",
+    ),
+    _CardCategoryWithFormat(
+        category=CardCategory.KOMPARATIV_SUPERLATIV,
+        format="{ADJEKTIV};{ADJEKTIV_KOMPARATIV}, am {ADJEKTIV_SUPERLATIV}",
+    ),
+    _CardCategoryWithFormat(
+        category=CardCategory.KONJUGATION_ICH_DU_ES,
+        format="{VERB_PRESENT};{ICH_DU_ES}",
+    ),
+    _CardCategoryWithFormat(
+        category=CardCategory.KONJUGATION_WIR_IHR_SIE,
+        format="{VERB_PRESENT};{WIR_IHR_SIE}",
+    ),
+    _CardCategoryWithFormat(
+        category=CardCategory.PRAEPOSITION_AKK_DATIV,
+        format="{VERB_PRESENT};{VERB_PRESENT} + {PREPOSITION} + {AKK_DAT}",
+    ),
+    _CardCategoryWithFormat(
+        category=CardCategory.QUIZFRAGE,
+        format="{STR_ANY_1};{STR_ANY_2}",
+    ),
+]
+
+
+def _select_card_category() -> _CardCategoryWithFormat:
     print("> Choose a category:")
-    for i, category in zip(category_indexes, category_keys):
-        print(f'    "{i}" for category: "{category}"')
+    for i, category_with_format in enumerate(_CATEGORY_WITH_FORMATS):
+        print(f"\t* `{i}` for category=`{category_with_format.category}`")
+    while True:
+        try:
+            category_index: int = int(input("> Enter a category code: "))
+            if 0 <= category_index < len(_CATEGORY_WITH_FORMATS):
+                selected_category = _CATEGORY_WITH_FORMATS[category_index]
+                print(f"[INFO] {selected_category=}.")
+                return selected_category
+            else:
+                print("> Given category code is not valid! Try again..")
+        except ValueError:
+            print("> Please enter a valid integer!")
 
-    category_index = input("> Enter a category code:")
 
-    while category_index not in category_indexes:
-        category_index = input(
-            "> Given category code is not valid! Enter a category code:"
-        )
+def _enter_from_options(an_enum: type[enum.StrEnum]) -> str:
+    options_str = ", ".join([f"`{x}`" for x in an_enum])
+    input_str = f"Enter an option ({options_str})"
+    input_str_with_err = f"Wrong option entered! {input_str}"
+    while True:
+        output = input(f"\t> {input_str}:")
+        if output.lower() in an_enum:
+            return an_enum(output.lower())
 
-    return int(category_index)
-
-
-def enter_from_options(options: List[str], output_upper_case: bool = True):
-    quoted_opt = list(map(lambda x: f'"{x}"', options))
-    output = input(
-        f"   > Enter {', '.join(quoted_opt[:-1])} or {quoted_opt[-1]}:"
-    ).lower()
-    if not output in options:
-        return None
-    if output_upper_case:
-        output = output.upper()
-    return output
+        if output.upper() in an_enum:
+            return an_enum(output.upper())
+        input_str = input_str_with_err
 
 
 def resolve_token(token: str) -> str | None:
@@ -70,7 +185,7 @@ def resolve_token(token: str) -> str | None:
                 if word.count(" ") > 1 or not word.replace(" ", "").isalpha():
                     return None
 
-            output = f"ich {ich}<br>du {du}<br>er/sie/es {er_sie_es}"
+            return f"ich {ich}<br>du {du}<br>er/sie/es {er_sie_es}"
 
         case "WIR_IHR_SIE":
             wir = input(
@@ -91,40 +206,40 @@ def resolve_token(token: str) -> str | None:
                 if word.count(" ") > 1 or not word.replace(" ", "").isalpha():
                     return None
 
-            output = f"wir {wir}<br>ihr {ihr}<br>Sie/sie {sie_sie}"
+            return f"wir {wir}<br>ihr {ihr}<br>Sie/sie {sie_sie}"
 
         case "ADJEKTIV":
             adj = input("   > Enter an adjective: ").lower()
             if not adj.isalpha():
                 return None
-            output = adj
+            return adj
 
         case "ADJEKTIV_KOMPARATIV":
             comp = input("   > Enter a comparative adjective: ").lower()
             if not comp.isalpha():
                 return None
-            output = comp
+            return comp
 
         case "ADJEKTIV_SUPERLATIV":
             superl = input('   > Enter a superlativ adjective (without "am"): ').lower()
             if not superl.isalpha():
                 return None
-            output = superl
+            return superl
 
         case t if t.startswith("STR_GERMAN"):
-            output = input("   > Enter a German text: ")
+            return input("   > Enter a German text: ")
 
         case t if t.startswith("STR_ENGLISH"):
-            output = input("   > Enter an English text: ")
+            return input("   > Enter an English text: ")
 
         case t if t.startswith("STR_ANY"):
-            output = input("   > Enter any text: ")
+            return input("   > Enter any text: ")
 
         case "NOUN_SINGULAR":
             noun = input("   > Enter a singular noun: ").title()
             if not noun.isalpha():
                 return None
-            output = noun
+            return noun
 
         case t if t.startswith("VERB_"):
             form = t.split("VERB_")[1].lower()
@@ -135,150 +250,102 @@ def resolve_token(token: str) -> str | None:
             cleaned = verb.replace("*", "").replace("sich ", "").replace(" ", "")
             if not cleaned.isalpha():
                 return None
-            output = verb
+            return verb
 
         case "ARTIKEL":
-            output = enter_from_options(["der", "die", "das"], output_upper_case=False)
+            return _enter_from_options(_Artikel)
 
         case "HAT_IST":
-            choice = enter_from_options(["hat", "ist", "both"], output_upper_case=True)
-            output = "HAT/IST" if choice == "BOTH" else choice
+            return _enter_from_options(_AuxiliaryVerbChoice)
 
         case "AKK_DAT":
-            output = enter_from_options(["akkusativ", "dativ"], output_upper_case=True)
+            return _enter_from_options(_GrammaticalCase)
 
         case "PREPOSITION":
-            preps = [
-                "an",
-                "auf",
-                "aus",
-                "bei",
-                "durch",
-                "für",
-                "gegen",
-                "mit",
-                "nach",
-                "ohne",
-                "um",
-                "unter",
-                "über",
-                "von",
-                "vor",
-                "zu",
-            ]
-            output = enter_from_options(preps, output_upper_case=True)
+            return _enter_from_options(_Preposition)
 
         case "OPTIONAL_PLURAL":
             sel = input("   > Does this word have a plural form? (Y/n): ").lower()
             if sel == "n":
-                output = "NO PLURAL"
+                return "NO PLURAL"
             else:
                 pl = input("   > Enter a plural noun without artikel: ").title()
                 if not pl.isalpha():
                     return None
-                output = f"die {pl}"
+                return f"die {pl}"
 
         case _:  # fallback for any other token
-            raise ValueError("Wrong Token")
-
-    # Final cleanup and empty‑string check
-    result = output.strip()
-    return result if result else None
+            raise ValueError(f"Wrong `{token=}`")
 
 
-def anki_deutsch_csv_row() -> str:
-    categories = OrderedDict(
-        [
-            (
-                "ARTIKEL ⋀ PLURAL",
-                "{NOUN_SINGULAR};{ARTIKEL} {NOUN_SINGULAR}, {OPTIONAL_PLURAL}",
-            ),
-            ("AKKUSATIVFORM", "{STR_GERMAN_1};{STR_GERMAN_2}"),
-            ("AUFFORDERUNG", "{STR_GERMAN};{STR_ENGLISH}"),
-            ("DATIVFORM", "{STR_GERMAN_1};{STR_GERMAN_2}"),
-            ("HAT/IST + PERFEKT", "{VERB_PRESENT};{HAT_IST} + {VERB_PERFEKT}"),
-            (
-                "PRÄTERITUM ⋀ HAT/IST + PERFEKT",
-                "{VERB_PRESENT};{VERB_PRÄTERITUM}, {HAT_IST} + {VERB_PERFEKT}",
-            ),
-            (
-                "DEU → ENG ⋀ ARTIKEL ⋀ PLURAL",
-                "{NOUN_SINGULAR};{STR_ENGLISH}, {ARTIKEL} {NOUN_SINGULAR}, {OPTIONAL_PLURAL}",
-            ),
-            ("DEU → ENG", "{STR_GERMAN};{STR_ENGLISH}"),
-            (
-                "KOMPARATIV ⋀ SUPERLATIV",
-                "{ADJEKTIV};{ADJEKTIV_KOMPARATIV}, am {ADJEKTIV_SUPERLATIV}",
-            ),
-            ("KOMPARATIV", "{ADJEKTIV};{ADJEKTIV_KOMPARATIV}"),
-            ("KONJUGATION (ICH/DU/ES)", "{VERB_PRESENT};{ICH_DU_ES}"),
-            ("KONJUGATION (WIR/IHR/SIE)", "{VERB_PRESENT};{WIR_IHR_SIE}"),
-            (
-                "PRÄPOSITION ⋀ AKKUSATIV/DATIV",
-                "{VERB_PRESENT};{VERB_PRESENT} + {PREPOSITION} + {AKK_DAT}",
-            ),
-            ("QUIZFRAGE", "{STR_ANY_1};{STR_ANY_2}"),
-            ("SUPERLATIV", "{ADJEKTIV};{ADJEKTIV_SUPERLATIV}"),
-        ]
-    )
+def _build_new_card() -> AnkiCard:
+    category_with_format: _CardCategoryWithFormat = _select_card_category()
+    category, fmt = category_with_format.category, category_with_format.format
+    tokens: list[str] = re.findall(r"{(?P<token>.*?)}", fmt)
 
-    category_index = enter_category_index(category_keys=categories.keys())
-
-    selected_category = list(categories.items())[category_index]
-    print(f'> Selected category: "{selected_category[0]}".')
-
-    tokens = list(dict.fromkeys(re.findall("{(.*?)}", selected_category[1])))
-
-    argument_pairs = {}
+    argument_pairs: dict[str, str] = {}
     for i, token in enumerate(tokens):
-        print(
-            f"> Token #{i} <{FORE_RED}{token}{STYLE_RESET_ALL}> in the pattern <{BACK_YELLOW}{FORE_BLACK}{selected_category[1]}{STYLE_RESET_ALL}>:"
+        token_colored = ColorCode.block(ColorCode.FORE_RED, text=token)
+        fmt_colored = ColorCode.block(
+            ColorCode.BACK_YELLOW, ColorCode.FORE_BLACK, text=fmt
         )
-        output = resolve_token(token)
-        while output is None:
-            print("[ERROR] Output is None, please try again..")
-            output = resolve_token(token)
+        LOGGER.info(f"Token #{i} <{token_colored}> in the pattern <{fmt_colored}>:")
+        while True:
+            if output := resolve_token(token):
+                break
+            LOGGER.warn(f"`{output=}` is invalid, please try again!")
         argument_pairs[token] = output
 
-    output = f"{selected_category[0]}: {selected_category[1].format(**argument_pairs)}"
-    print(f'> OUTPUT: "{BACK_CYAN}{FORE_BLACK}{output}{STYLE_RESET_ALL}"')
-    return output
+    # TODO: Workaround
+    front_without_category, back = fmt.format(**argument_pairs).split(";")
+    front = f"{category}: {front_without_category}"
+    return AnkiCard.parse_iterable([front, back])
 
 
-def anki_deutsch_adder(filename: str):
-    if os.path.exists(filename):
-        with open(filename, "r", encoding="utf-8") as fp:
-            print(f"> INITIAL FILE CONTENT:{FORE_MAGENTA}", end="")
-            lines = fp.readlines()
-            if lines == []:
-                print("<EMPTY>", end="")
-                print(STYLE_RESET_ALL)
-            else:
-                for line in lines:
-                    print("\n  > " + line[:-1], end="")
-                print(STYLE_RESET_ALL)
-                selection = input("> Do you want to erase the file content? (y/N)?:")
-                if selection.lower() == "y":
-                    with open(filename, "a+", encoding="utf-8") as fp:
-                        fp.truncate(0)
-                        print("> File content deleted!")
-                        time.sleep(1.5)
+def _check_initial_file_content(filepath: pathlib.Path) -> None:
+    if not filepath.exists():
+        return
 
+    with filepath.open(mode="r", encoding="utf-8") as fp:
+        lines = fp.readlines()
+    if not lines:
+        file_content_str = ColorCode.block(ColorCode.FORE_MAGENTA, text="<EMPTY>")
+        print(f"[INFO] INITIAL FILE CONTENT: {file_content_str}")
+        return
+    # TODO:tt
+    non_empty_lines = [
+        f"[{str(i).zfill(2)}] {ln.rstrip()}" for i, ln in enumerate(lines) if ln.strip()
+    ]
+    file_content_str = ColorCode.block(
+        ColorCode.FORE_MAGENTA, text="\n".join(non_empty_lines)
+    )
+    print(f"[INFO] INITIAL FILE CONTENT:\n{file_content_str}")
+    selection = input("> Do you want to erase the file content? (y/N)?:")
+    if selection.lower() == "y":
+        with open(filepath, "a+", encoding="utf-8") as fp:
+            fp.truncate(0)
+            LOGGER.info("File content deleted!")
+            time.sleep(1.5)
+
+
+def anki_deutsch_adder(filepath: pathlib.Path):
+    _check_initial_file_content(filepath=filepath)
     while True:
-        with open(filename, "a+", encoding="utf-8") as fp:
-            try:
-                output = anki_deutsch_csv_row()
-                fp.write(output + "\n")
-            except KeyboardInterrupt as e:
-                print(f"\n> Got: {e}, exiting..")
-                break
+        try:
+            with open(filepath, "a+", encoding="utf-8") as fp:
+                new_card: AnkiCard = _build_new_card()
+                LOGGER.info(f"`{new_card.to_colored_str=}`")
+                fp.write(new_card.to_str + "\n")
+        except KeyboardInterrupt as e:
+            print(f"\n> Got: {e}, exiting..")
+            break
 
-        with open(filename, "r", encoding="utf-8") as fp:
-            print(f"> CURRENT FILE CONTENT:{FORE_YELLOW}", end="")
+        with open(filepath, "r", encoding="utf-8") as fp:
+            print(f"> CURRENT FILE CONTENT:{ColorCode.FORE_YELLOW}", end="")
             for line in fp.readlines():
                 print("\n  > " + line[:-1], end="")
-            print(STYLE_RESET_ALL)
+            print(ColorCode.STYLE_RESET_ALL)
 
 
 if __name__ == "__main__":
-    anki_deutsch_adder(filename="anki_card_tooling/output/new_anki_cards.csv")
+    anki_deutsch_adder(filepath=pathlib.Path("output/new_anki_cards.csv"))
