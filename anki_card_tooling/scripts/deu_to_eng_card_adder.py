@@ -1,16 +1,14 @@
+import collections
 import csv
 import dataclasses
 import enum
+import functools
 import pathlib
 import pprint
 import re
 import typing
-from pathlib import Path
-from typing import Pattern
 
 import pydantic
-from typing_extensions import Literal
-
 
 
 class _MetadataTag(enum.StrEnum):
@@ -21,16 +19,16 @@ class _MetadataTag(enum.StrEnum):
 
 class _CardCategory(enum.StrEnum):
     ABKUERZUNG = "ABKÜRZUNG"
-    ADJEKTIVDEKLINATION_AKKUSATIV_BESTIMMT = (
+    ADJEKTIVDEKLINATION_AKK_BESTIMMT = (
         "ADJEKTIVDEKLINATION und AKKUSATIV mit BESTIMMTEM ARTIKEL (der/die/das)"
     )
-    ADJEKTIVDEKLINATION_AKKUSATIV_NEGATIV = (
+    ADJEKTIVDEKLINATION_AKK_NEGATIV = (
         "ADJEKTIVDEKLINATION und AKKUSATIV mit NEGATIVEM ARTIKEL (kein)"
     )
-    ADJEKTIVDEKLINATION_AKKUSATIV_POSSESSIV = (
+    ADJEKTIVDEKLINATION_AKK_POSSESSIV = (
         "ADJEKTIVDEKLINATION und AKKUSATIV mit POSSESSIVARTIKEL (mein)"
     )
-    ADJEKTIVDEKLINATION_AKKUSATIV_UNBESTIMMT = (
+    ADJEKTIVDEKLINATION_AKK_UNBESTIMMT = (
         "ADJEKTIVDEKLINATION und AKKUSATIV mit UNBESTIMMTEM ARTIKEL (ein)"
     )
     ADJEKTIVDEKLINATION_DATIV_BESTIMMT = (
@@ -74,19 +72,19 @@ class _CardCategory(enum.StrEnum):
     KONJUGATION_ICH_DU_ES = "KONJUGATION (ICH/DU/ES)"
     KONJUGATION_WIR_IHR_SIE = "KONJUGATION (WIR/IHR/SIE)"
     LOKALE_PRAEPOSITION_BEDEUTUNG = "LOKALE PRÄPOSITION BEDEUTUNG"
-    PRAEPOSITION_AKKUSATIV_DATIV = "PRÄPOSITION ⋀ AKKUSATIV/DATIV"
+    PRAEPOSITION_AKK_DATIV = "PRÄPOSITION ⋀ AKKUSATIV/DATIV"
     PRAETERITUM_HAT_IST_PERFEKT = "PRÄTERITUM ⋀ HAT/IST + PERFEKT"
     QUIZFRAGE = "QUIZFRAGE"
-    REFLEXIVES_VERB_AKKUSATIV_DATIV = "REFLEXIVES VERB ⋀ AKKUSATIV/DATIV"
+    REFLEXIVES_VERB_AKK_DATIV = "REFLEXIVES VERB ⋀ AKKUSATIV/DATIV"
     REFLEXIVPRONOMEN_DATIV = "REFLEXIVPRONOMEN ⋀ DATIV"
     SUFFIX_ARTIKEL_MIT_AUSNAHMEN = "SUFFIX-ARTIKEL (MIT AUSNAHMEN)"
     TEMPORALE_PRAEPOSITION_BEDEUTUNG = "TEMPORALE PRÄPOSITION BEDEUTUNG"
 
 
-class _RawCard(pydantic.BaseModel):
+class _AnkiCard(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(frozen=True)
-    front: str = pydantic.Field(..., pattern=r"^[^:]+: [^:]+$")
-    back: str
+    front: str = pydantic.Field(..., pattern=r"^\S[^:]*: [^:]*\S$")
+    back: str = pydantic.Field(..., pattern=r"^\S.*\S$")
 
     @classmethod
     def parse_iterable(cls, iterable: typing.Iterable) -> typing.Self:
@@ -94,42 +92,51 @@ class _RawCard(pydantic.BaseModel):
             dict(zip(cls.model_fields.keys(), iterable, strict=True))
         )
 
+    @functools.cached_property
+    def _split_front(self) -> list[str]:
+        return self.front.split(": ")
 
-def foo(*, filepath: pathlib.Path, delimiter: str):
+    @functools.cached_property
+    def category(self) -> _CardCategory:
+        card_category_str, front_without_category = self._split_front
+        return _CardCategory(card_category_str)
+
+    @functools.cached_property
+    def front_without_category(self) -> str:
+        _, front_without_category = self._split_front
+        return front_without_category
+
+
+def _fetch_cards(*, raw_rows: list[list[str]]) -> list[_AnkiCard]:
     ignored_rows: list[list[str]] = []
-    raw_cards: list[_RawCard] = []
-    with filepath.open("r", encoding="utf-8") as fp:
-        for row in csv.reader(fp, delimiter=delimiter):
-            row_first_part, *_ = row
-            if any(row_first_part.startswith(pref) for pref in list(_MetadataTag)):
-                print(f"[WARN] Skipping metadata {row=}")
-                ignored_rows.append(row)
-                continue
-            if not row[-1]:
-                row.pop()
-            # if any( (row_part in HTML_CATEGORY_TO_REAL_SYMBOL) for row_part in row): # TODO: TMPP
+    anki_cards: list[_AnkiCard] = []
+    html_char_pattern: re.Pattern[str] = re.compile(r"&\w+;")
+    for row in raw_rows:
+        if not row[-1]:
+            row.pop()
+        if any(html_char_pattern.search(row_part) for row_part in row):
+            raise ValueError(f"[ERROR] HTML character found in `{row=}`")
+        row_first_part, *_ = row
+        if any(row_first_part.startswith(pref) for pref in _MetadataTag):
+            print(f"[WARN] Skipping metadata {row=}")
+            ignored_rows.append(row)
+            continue
+        try:
+            anki_card: _AnkiCard = _AnkiCard.parse_iterable(row)
+        except (pydantic.ValidationError, ValueError) as err:
+            raise ValueError(f"[ERROR] Validation error in `{row=}`") from err
 
-            try:
-                raw_card: _RawCard = _RawCard.parse_iterable(row)
-            except (pydantic.ValidationError, ValueError) as err:
-                raise ValueError(f"[ERROR] Validation error in `{row=}`") from err
-
-            raw_cards.append(raw_card)
-    for raw_card in raw_cards:
-        card_category_str, front_key = raw_card.front.split(": ")
-        card_category = _CardCategory(card_category_str)
-        print(card_category)
-    set([rc.front.split(": ")[0] for rc in raw_cards])
-    breakpoint()
+        anki_cards.append(anki_card)
 
     print(f"[INFO] Ignored `{len(ignored_rows)}` rows.")
-    print(f"[INFO] Collected `{len(raw_cards)}` cards.")
-    breakpoint()
-    print("ag")
+    print(f"[INFO] Collected `{len(anki_cards)}` cards.")
+    anki_card_categories: list[_CardCategory] = [ac.category for ac in anki_cards]
+    print(f"[INFO] Collected `{len(set(anki_card_categories))}` categories.")
+    return anki_cards
 
 
 #: Mapping of HTML entities to their literal replacements
-HTML_CATEGORY_TO_REAL_SYMBOL: Final[dict[str, str]] = {
+HTML_CATEGORY_TO_REAL_SYMBOL: dict[str, str] = {
     "&#x27;": "'",
     "&quot;": '"',
     "&amp;": "&",
@@ -141,28 +148,19 @@ NO_SINGULAR_TAG = "NO SINGULAR"
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
-class _InputData:
-    """Input deck configuration."""
+class _InputConfig:
+    delimiter: str
+    filepath: pathlib.Path
 
-    FILEPATH: Final[Path] = Path("input_deck") / "Deutsche Übung.txt"
-    FILENAME = FILEPATH.stem
-    DELIMITER: Final[Literal["\t"]] = "\t"
-
-
-@dataclasses.dataclass(frozen=True, kw_only=True)
-class _OutputData:
-    """Output files and directories."""
-
-    DELIMITER: typing.Literal[";"] = ";"
-    PARENT_DIR: Path = Path("output")
-    NEW_ENTRIES_FILEPATH = f"{PARENT_DIR}/new_translations.csv"
-    UPDATED_ENTRIES_FILEPATH = f"{PARENT_DIR}/updated_translations.csv"
+    @functools.cached_property
+    def filename(self):
+        return self.filepath.stem
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
-class _Config:
-    input_data: _InputData
-    output_data: _OutputData
+class _OutputConfig:
+    delimiter: str
+    upserted_entries_filepath: pathlib.Path
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
@@ -182,10 +180,10 @@ class EngToDeu:
     PREFIX_SIMPLE = f"{CATEGORY}:"
 
 
-pp: Final[pprint.PrettyPrinter] = pprint.PrettyPrinter(indent=4)  # TODO: DELL
+pp: pprint.PrettyPrinter = pprint.PrettyPrinter(indent=4)  # TODO: DELL
 
 
-def check_data_integrity(filepath: Path, delimiter: str) -> None:
+def check_data_integrity(filepath: pathlib.Path, delimiter: str) -> None:
     """
     Verify that the first two columns of the TSV do not contain empty values
     or HTML-entity patterns like &...; (except in the #separator/html/tags lines).
@@ -219,7 +217,9 @@ def check_data_integrity(filepath: Path, delimiter: str) -> None:
         )
 
 
-def read_tuples(filepath: Path, delimiter: str, category: str) -> list[tuple[str, str]]:
+def read_tuples(
+    filepath: pathlib.Path, delimiter: str, category: str
+) -> list[tuple[str, str]]:
     """
     Read all rows containing `category` in the first column, returning a list of
     (category, value) tuples (first two columns only, value stripped).
@@ -309,7 +309,7 @@ def filter_existing(
 
 
 def write_lines(
-    entries: dict[str, str], prefix: str, outpath: Path, delimiter: str
+    entries: dict[str, str], prefix: str, outpath: pathlib.Path, delimiter: str
 ) -> None:
     """
     Write out entries as lines of the form:
@@ -322,20 +322,24 @@ def write_lines(
             fp.write(f"{prefix} {key}{delimiter}{val}\n")
 
 
-def main() -> None:
+def main(input_config: _InputConfig) -> None:
     """Main processing pipeline."""
     # 1. Integrity check
-    check_data_integrity(_InputData.FILEPATH, _InputData.DELIMITER)
+    check_data_integrity(input_config.filepath, input_config.delimiter)
 
     # 2. Read & extract DEU → ENG
-    deu_raw = read_tuples(_InputData.FILEPATH, _InputData.DELIMITER, DeuToEng.CATEGORY)
+    deu_raw = read_tuples(input_config.filepath, input_config.delimiter, "DEU → ENG")
+    breakpoint()
+    print("gdg")
     deu_pairs = extract_deu_to_eng(
-        deu_raw, DeuToEng.PREFIX_SIMPLE, DeuToEng.PREFIX_ARTIKEL_PLURAL
+        deu_raw, "DEU → ENG:", DeuToEng.PREFIX_ARTIKEL_PLURAL
     )
     candidates = build_translation_dict(deu_pairs)
 
     # 3. Read & extract ENG → DEU
-    eng_raw = read_tuples(_InputData.FILEPATH, _InputData.DELIMITER, EngToDeu.CATEGORY)
+    eng_raw = read_tuples(
+        _InputConfig.filepath, _InputConfig.delimiter, EngToDeu.CATEGORY
+    )
     eng_pairs = extract_eng_to_deu(eng_raw, EngToDeu.PREFIX_SIMPLE)
     existing = build_translation_dict(eng_pairs)
 
@@ -352,25 +356,125 @@ def main() -> None:
     write_lines(
         new_entries,
         EngToDeu.PREFIX_SIMPLE,
-        Path(_OutputData.NEW_ENTRIES_FILEPATH),
-        _OutputData.DELIMITER,
+        pathlib.Path(_OutputConfig.new_entries_filepath),
+        _OutputConfig.delimiter,
     )
     write_lines(
         updated_entries,
         EngToDeu.PREFIX_SIMPLE,
-        Path(_OutputData.UPDATED_ENTRIES_FILEPATH),
-        _OutputData.DELIMITER,
+        pathlib.Path(_OutputConfig.updated_entries_filepath),
+        _OutputConfig.delimiter,
     )
 
 
-def main_new() -> None:
-    DELIMITER = "\t"  # TODO: MOVE
+def _split_strict(s: str, *, delimiter: str) -> typing.Generator[str]:
+    for part in s.split(delimiter):
+        if s != s.strip():
+            raise ValueError(f"String=`{s}` has leading or trailing whitespace")
+        yield part
 
-    foo(filepath=pathlib.Path("input_deck/Deutsche Übung.txt"), delimiter=DELIMITER)
-    breakpoint()
-    print("aga")
+
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class _TranslationPair:
+    deu: str
+    eng: str
+
+
+def _fetch_deu_to_eng_pairs(*, cards: list[_AnkiCard]) -> list[_TranslationPair]:
+    deu_to_eng_pairs: list[_TranslationPair] = []
+    for card in cards:
+        match card.category:
+            case _CardCategory.DEU_TO_ENG:
+                deu_word: str = card.front_without_category
+                for eng_word in _split_strict(card.back, delimiter=" | "):
+                    pair = _TranslationPair(deu=deu_word, eng=eng_word)
+                    deu_to_eng_pairs.append(pair)
+            case _CardCategory.DEU_TO_ENG_ARTIKEL_PLURAL:
+                eng_words_part, deu_word, _ = _split_strict(card.back, delimiter=", ")
+                for eng_word in _split_strict(eng_words_part, delimiter=" | "):
+                    pair = _TranslationPair(deu=deu_word, eng=eng_word)
+                    deu_to_eng_pairs.append(pair)
+    return deu_to_eng_pairs
+
+
+def _fetch_eng_to_deu_pairs(*, cards: list[_AnkiCard]) -> list[_TranslationPair]:
+    eng_to_deu_pairs: list[_TranslationPair] = []
+    for card in cards:
+        match card.category:
+            case _CardCategory.ENG_TO_DEU:
+                eng_word: str = card.front_without_category
+                for deu_word in _split_strict(card.back, delimiter=" | "):
+                    pair = _TranslationPair(deu=deu_word, eng=eng_word)
+                    eng_to_deu_pairs.append(pair)
+    return eng_to_deu_pairs
+
+
+def _group_pairs_by_eng_word(
+    *,
+    pairs: list[_TranslationPair],
+) -> dict[str, list[_TranslationPair]]:
+    pairs_by_eng: dict[str, list[_TranslationPair]] = collections.defaultdict(list)
+    for pair in pairs:
+        pairs_by_eng[pair.eng].append(pair)
+    return pairs_by_eng
+
+
+def _write_upserted_translation_pairs(
+    *,
+    output_config: _OutputConfig,
+    deu_to_eng_pairs: list[_TranslationPair],
+    eng_to_deu_pairs: list[_TranslationPair],
+) -> None:
+    unique_deu_to_eng_pairs: list[_TranslationPair] = sorted(
+        set(deu_to_eng_pairs).difference(eng_to_deu_pairs), key=lambda x: x.eng
+    )
+
+    unique_deu_to_eng_pairs_by_eng: dict[str, list[_TranslationPair]] = (
+        _group_pairs_by_eng_word(pairs=unique_deu_to_eng_pairs)
+    )
+
+    eng_to_eng_deu_pairs: dict[str, list[_TranslationPair]] = _group_pairs_by_eng_word(
+        pairs=eng_to_deu_pairs
+    )
+
+    with output_config.upserted_entries_filepath.open("w", encoding="utf-8") as fp:
+        for eng_word, deu_eng_pairs in unique_deu_to_eng_pairs_by_eng.items():
+            all_pairs_per_eng_word = deu_eng_pairs + eng_to_eng_deu_pairs.get(
+                eng_word, []
+            )
+            deu_words = " | ".join(
+                sorted({pair.deu for pair in all_pairs_per_eng_word})
+            )
+            built_line = f"{_CardCategory.ENG_TO_DEU}: {eng_word}{output_config.delimiter}{deu_words}"
+            fp.write(built_line + "\n")
+
+
+def main_new() -> None:
+    input_config = _InputConfig(
+        filepath=pathlib.Path("input_deck/Deutsche Übung.txt"), delimiter="\t"
+    )
+    with input_config.filepath.open("r", encoding="utf-8") as fp:
+        raw_rows = list(csv.reader(fp, delimiter=input_config.delimiter))
+
+    anki_cards: list[_AnkiCard] = _fetch_cards(raw_rows=raw_rows)
+    deu_to_eng_pairs: list[_TranslationPair] = _fetch_deu_to_eng_pairs(cards=anki_cards)
+    eng_to_deu_pairs: list[_TranslationPair] = _fetch_eng_to_deu_pairs(cards=anki_cards)
+
+    if eng_to_deu_pairs_unique := set(eng_to_deu_pairs).difference(deu_to_eng_pairs):
+        formatted = pprint.pformat(eng_to_deu_pairs_unique)
+        raise ValueError(
+            f"For these cards there are ENG to DEU but not DEU to ENG translations:\n{formatted}"
+        )
+
+    _write_upserted_translation_pairs(
+        output_config=_OutputConfig(
+            delimiter=";",
+            upserted_entries_filepath=pathlib.Path("output/upserted_translations.csv"),
+        ),
+        deu_to_eng_pairs=deu_to_eng_pairs,
+        eng_to_deu_pairs=eng_to_deu_pairs,
+    )
 
 
 if __name__ == "__main__":
     main_new()
-    # main()

@@ -1,19 +1,18 @@
 set shell := ["bash", "-cu"]
 
-PYTHON := "3.14"
-VENV := ".venv"
+PYTHON_VERSION := "3.14"
+VENV_DIR := ".venv"
 
 default:
     @just --list
 
 setup:
-    # Install UV if missing
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-
-    # Create or reset the virtual environment
-    uv venv --python {{ PYTHON }} --clear
-
-    # Install packages from pyproject.toml into the venv
-    uv pip install -e .
-
-    @echo "Run: source {{ VENV }}/bin/activate  # optional if you want manual use"
+    #!/usr/bin/env bash
+    rm -rf {{ VENV_DIR }}
+    curl -LsSf https://astral.sh/uv/0.9.1/install.sh | sh
+    uv venv {{ VENV_DIR }} --python {{ PYTHON_VERSION }}
+    PARENT_DIR=$(pwd)
+    echo "export PYTHONPATH=$PARENT_DIR/" >> .venv/bin/activate
+    source .venv/bin/activate && uv pip install .
+    echo Activate the virtual environment:
+    echo "Run: source {{ VENV_DIR }}/bin/activate"

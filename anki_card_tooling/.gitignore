@@ -1,8 +1,8 @@
 # Ignore input_deck directory
-anki_card_tooling/input_deck/
+input_deck/
 
 # Ignore output directory
-anki_card_tooling/output/
+output/
 
 # MyPy Cache
 .mypy_cache
@@ -12,3 +12,6 @@ anki_card_tooling/output/
 .idea
 
 *.egg-info
+
+uv.lock
+build

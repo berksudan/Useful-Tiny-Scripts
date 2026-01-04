@@ -1,9 +1,8 @@
-import readline
-from collections import OrderedDict
-from typing import List, Optional
-import re
 import os
+import re
 import time
+from collections import OrderedDict
+from typing import List
 
 BACK_CYAN = "\x1b[46m"  # Taken from the Back.CYAN of the Colorama package
 BACK_YELLOW = "\x1b[43m"  # Taken from the Back.YELLOW of the Colorama package
@@ -33,14 +32,13 @@ def enter_category_index(category_keys: List[int]) -> int:
 def enter_from_options(options: List[str], output_upper_case: bool = True):
     quoted_opt = list(map(lambda x: f'"{x}"', options))
     output = input(
-        f'   > Enter {", ".join(quoted_opt[:-1])} or {quoted_opt[-1]}:'
+        f"   > Enter {', '.join(quoted_opt[:-1])} or {quoted_opt[-1]}:"
     ).lower()
     if not output in options:
         return None
     if output_upper_case:
         output = output.upper()
     return output
-
 
 
 def resolve_token(token: str) -> str | None:
@@ -64,7 +62,11 @@ def resolve_token(token: str) -> str | None:
             ).lower()
 
             # Validate that each cleaned word is single‑ or two‑part and alphabetic
-            for word in (ich.replace(" mich", ""), du.replace(" dich", ""), er_sie_es.replace(" sich", "")):
+            for word in (
+                ich.replace(" mich", ""),
+                du.replace(" dich", ""),
+                er_sie_es.replace(" sich", ""),
+            ):
                 if word.count(" ") > 1 or not word.replace(" ", "").isalpha():
                     return None
 
@@ -81,7 +83,11 @@ def resolve_token(token: str) -> str | None:
                 '   > Enter a conjugation for "Sie/sie" (add ` sich` at the end if reflexive): '
             ).lower()
 
-            for word in (wir.replace(" uns", ""), ihr.replace(" euch", ""), sie_sie.replace(" sich", "")):
+            for word in (
+                wir.replace(" uns", ""),
+                ihr.replace(" euch", ""),
+                sie_sie.replace(" sich", ""),
+            ):
                 if word.count(" ") > 1 or not word.replace(" ", "").isalpha():
                     return None
 
@@ -143,8 +149,22 @@ def resolve_token(token: str) -> str | None:
 
         case "PREPOSITION":
             preps = [
-                "an", "auf", "aus", "bei", "durch", "für", "gegen",
-                "mit", "nach", "ohne", "um", "unter", "über", "von", "vor", "zu",
+                "an",
+                "auf",
+                "aus",
+                "bei",
+                "durch",
+                "für",
+                "gegen",
+                "mit",
+                "nach",
+                "ohne",
+                "um",
+                "unter",
+                "über",
+                "von",
+                "vor",
+                "zu",
             ]
             output = enter_from_options(preps, output_upper_case=True)
 
@@ -261,4 +281,4 @@ def anki_deutsch_adder(filename: str):
 
 
 if __name__ == "__main__":
-    anki_deutsch_adder(filename="output/new_anki_cards.csv")
+    anki_deutsch_adder(filename="anki_card_tooling/output/new_anki_cards.csv")
