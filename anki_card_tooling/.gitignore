@@ -15,3 +15,5 @@ output/
 
 uv.lock
 build
+
+**/__pycache__/*.pyc
