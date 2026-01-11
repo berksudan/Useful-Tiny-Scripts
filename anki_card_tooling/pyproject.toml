@@ -7,9 +7,9 @@ requires-python = ">=3.14"
 name = "anki-card-tooling"
 dynamic = ["version"]
 dependencies = [
-    "ruff==0.14.10",
+    "ruff==0.14.11",
     "pydantic==2.12.5",
-    "ty==0.0.8",
+    "ty==0.0.11",
 ]
 
 
