@@ -30,7 +30,6 @@ class CardCategory(enum.StrEnum):
     PRAEPOSITION_AKK_DATIV = "PRÄPOSITION ⋀ AKKUSATIV/DATIV"
     PRAETERITUM_HAT_IST_PERFEKT = "PRÄTERITUM ⋀ HAT/IST + PERFEKT"
     QUIZFRAGE = "QUIZFRAGE"
-    REFLEXIVES_VERB_AKK_DATIV = "REFLEXIVES VERB ⋀ AKKUSATIV/DATIV"
     REFLEXIVPRONOMEN_DATIV = "REFLEXIVPRONOMEN ⋀ DATIV"
     SUFFIX_ARTIKEL_MIT_AUSNAHMEN = "SUFFIX-ARTIKEL (MIT AUSNAHMEN)"
     TEMPORALE_PRAEPOSITION_BEDEUTUNG = "TEMPORALE PRÄPOSITION BEDEUTUNG"
@@ -46,7 +45,7 @@ class ColorCode(enum.StrEnum):
     STYLE_RESET_ALL = "\x1b[0m"
 
     @classmethod
-    def block(cls, *codes: ColorCode, text: str) -> str:
+    def block(cls, *codes: typing.Self, text: str) -> str:
         concatenated_codes = "".join(code.value for code in codes)
         return f"{concatenated_codes}{text}{cls.STYLE_RESET_ALL}"
 
