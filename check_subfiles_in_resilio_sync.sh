@@ -123,3 +123,6 @@ trash_all_but_newest "$CONTACTS_DIR"
 
 # 2) Run find & report from current directory, passing exclusion list
 find_and_report "." "${EXCLUDED_DIRS[@]}"
+
+echo
+read -rp "Press Enter to exit..."
