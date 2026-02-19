@@ -17,7 +17,7 @@
 # 4. Follow the prompts to verify directory paths and contents.
 # 5. The script will perform a dry run and, if confirmed, execute the actual backup.
 
-DEF_SOURCE_DIR="/media/${USER}/Seagate Expansion Drive/"
+DEF_SOURCE_DIR="/media/${USER}/T7 Shield/"
 
 echo_info() {
     echo -e "\033[0;36m[INFO] $1\033[0m"
@@ -71,7 +71,7 @@ echo "-----------------------------"
 echo_question "Proceed with the actual rsync? [y/N]: " && read yn
     case $yn in
         N|n|"") echo_info "exiting.."; exit 1 ;;
-        Y|y|*) rsync -avhP --delete \
+        Y|y|*) rsync -avh --delete \
     --exclude $backup_bash_filename \
     --exclude '$RECYCLE.BIN/' \
     --exclude 'System Volume Information' \
